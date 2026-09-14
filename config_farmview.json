@@ -1,0 +1,9 @@
+{
+    "irrigacao_automatica": false,
+    "limite_umidade_baixa": 35.0,
+    "limite_umidade_alta": 60.0,
+    "sensor_referencia": 1,
+    "tomada_bomba": 1,
+    "intervalo_verificacao_segundos": 12,
+    "ip_aplicacao": "10.20.138.38"
+}
