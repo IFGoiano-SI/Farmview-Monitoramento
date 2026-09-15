@@ -1,0 +1,148 @@
+<?php
+
+namespace Models;
+
+use \PDO;
+use \PDOException;
+
+class Database
+{
+    const HOST = 'localhost';
+
+    const NAME = 'CEBIOHUB';
+
+    const USER = 'root';
+
+    const PASS = "";
+
+    const PORT = '3307';
+
+    private ?string $tabela;
+
+    private PDO $conection;
+
+
+    public function __construct(?string $tabela = null)
+    {
+        $this->tabela = $tabela; // essa tabela vai receber a variavel de toda tabela
+        $this->setConexao();
+    }
+
+
+    private function setConexao()
+    {
+        try {
+
+            $this->conection = new PDO("mysql:host=" . self::HOST . ';dbname=' . self::NAME . ';port=' . self::PORT, self::USER, self::PASS);
+            $this->conection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        } catch (PDOException $e) {
+            throw $e;
+        }
+    }
+
+    public function execute($query, $param = [])
+    {
+        try {
+            $stmt = $this->conection->prepare($query);
+            $stmt->execute($param);
+            return $stmt;
+        } catch (PDOException $e) {
+            throw $e;
+        }
+    }
+
+    /**
+     * Criar dados
+     * LER dados
+     * Alterar dados
+     * Deletar dados
+     */
+
+    /**
+     * @param Array de inserção de dados completos
+     * @return LastId - Ultimo ID inserido no banco de dados
+     */
+
+    public function insert($values)
+    {
+
+        $campo = array_keys($values); //vai pegar a chave do array
+        $posicao = array_pad([], count($values), '?'); //aqui vai pegar o array, contar quantos elementos tem e vai passar como interrogação a quantidade
+
+        // Insert into <tabela> (campos que posição desta tabela) values (?) a quantidade de itens que tem dentro da tabela
+
+
+        $query = "INSERT into " . $this->tabela . ' (' . implode(',', $campo) . ') VALUES (' . implode(',', $posicao) . ')';
+
+        // Insere os valores que foram passados
+        $this->execute($query, array_values($values));
+
+
+        return $this->conection->lastInsertId();
+    }
+
+    // Validação de foto de perfil
+    public function validaImagem(array $usuario_imagem)
+    {
+        // Verificando se o arquivo é mairo que 2MB
+        if ($usuario_imagem['size'] > (1024 * 1024 * 2)) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    // Verifica o tipo da imagem
+    public function tipoImagem(array $usuario_imagem)
+    {
+
+        $tipoImagem = ['image/jpeg', 'image/jpg', 'image/png'];
+
+
+        if (!in_array($usuario_imagem['type'], $tipoImagem)) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    public function tamanhoImagem(array $usuario_imagem)
+    {
+        $dimensoes = getimagesize($usuario_imagem['tmp_name']);
+
+
+        if ($dimensoes[0] < 400 || $dimensoes[1] < 400) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+
+    /**
+     * @param Id do usuario para pegar o ultimo usuario cadastrado
+     * @return usuario como parametro para sessao
+     * @uso Usado em usuarioController
+     */
+    public function buscarUsuario($id)
+    {
+
+        $stmt = $this->conection->prepare('SELECT * FROM usuarios WHERE usuarios_id = ?');
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function select($join = null, $where = null, $order = null, $limit = null, $campo = '*')
+    {
+
+        $join = !empty($join) ? 'INNER JOIN' . $join : '';
+        $where = !empty($where) ? "WHERE " . $where : '';
+        $order = !empty($order) ? "ODER BY " . $order : '';
+        $limit = !empty($limit) ? "LIMIT " . $limit : '';
+
+
+        $query = 'SELECT * FROM ' . $this->tabela . ' ' . $join . ' ' . $where . '' . $order . '' . $limit;
+
+        return $this->execute($query);
+    }
+}
