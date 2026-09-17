@@ -225,7 +225,8 @@ class HomeController extends RenderView
 
     public function ligarCamera()
     {
-        $url = "http://".$_SESSION['url_rasp']."/toggle_camera";
+        #$url = "http://".$_SESSION['url_rasp']."/toggle_camera";
+        $url = "http://10.20.138.38:5000/toggle_camera";
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

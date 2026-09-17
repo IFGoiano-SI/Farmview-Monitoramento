@@ -13,7 +13,7 @@ class Database
 
     const USER = 'root';
 
-    const PASS = "";
+    const PASS = "root";
 
     const PORT = '3307';
 
