@@ -1,5 +1,3 @@
-<!-- Rotas do projeto -->
-
 <?php
 
 $routes = [
@@ -32,6 +30,7 @@ $routes = [
     '/experimentos/excluirExperimento/:id'      => ['ExperimentoController', 'excluirExperimento'],
     '/home/toggleDispositivo'                   => ['HomeController', 'toggleDispositivo'],
     '/home/ligarcamera'               => ['HomeController', 'ligarCamera'],
+    '/home/sensores' => ['HomeController', 'sensores'],
 
 
 

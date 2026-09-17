@@ -58,8 +58,8 @@
         }
 
         .buttonSensores .form-check-input:checked {
-            background-color: #212121;
-            border-color: #212121;
+            background-color: #0f9e30;
+            border-color: #0f9e30;
         }
 
         .buttonSensores .form-check-input:focus {
@@ -75,6 +75,7 @@
     $foto = $_SESSION['usuarios_logado']->usuarios_imagem;
     $nome = $_SESSION['usuarios_logado']->usuarios_nome;
     $escolaridade = $_SESSION['usuarios_logado']->usuarios_escolaridade;
+    $url_rasp = $_SESSION['url_rasp'];
     ?>
 
     <div class="fullScreen">
@@ -139,9 +140,35 @@
                             <img id="imagePerson" src="<?= base_url($foto) ?>" alt="Foto de perfil">
                         </a>
 
-                        <button type="button" class="btn-logout" data-bs-toggle="modal" data-bs-target="#meuModalLogout">
+                        <button type="button" class="btn-logout" data-bs-toggle="modal" data-bs-target="#meuModalSair">
                             Sair <i class="bi bi-box-arrow-right"></i>
                         </button>
+                    </div>
+                </div>
+
+
+                <div class="modal fade" id="meuModalSair" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered modal-md">
+                        <div class="modal-content">
+
+                            <div class="modal-header">
+                                <h5 class="modal-title" style="text-align: center !important; font-size: x-large;"></h5>
+                            </div>
+
+                            <div class="modal-body">
+                                <form action="<?= base_url('login/logout') ?>" method="post">
+                                    <h4 class="text-center mt-4 mb-5">Deseja sair da sua conta?</h4>
+                                    <p class="text-center">
+                                        <button type="button" class="btn-voltar" data-bs-dismiss="modal">Voltar</button>
+                                        <button type="submit" class="btn-finalizar" data-bs-dismiss="modal"
+                                            data-bs-toggle="modal" data-bs-target="#modal2">Sair</button>
+                                    </p>
+                                </form>
+                            </div>
+
+                            <div class="modal-footer"></div>
+
+                        </div>
                     </div>
                 </div>
 
@@ -215,7 +242,6 @@
                 </div>
 
             </div>
-
             <!-- ===================== CONTEÚDO PRINCIPAL ===================== -->
             <div class="mainContent">
 
@@ -227,7 +253,7 @@
                         <div class="cam">
                             <img id="camera"
                                 style="width: 100%; height: 100%;"
-                                src="http://10.20.138.38:5000/video_feed"
+                                src="<?= $_SESSION['url_rasp']?>/video_feed"
                                 alt="Câmera indisponível">
                         </div>
                     </form>
@@ -272,7 +298,7 @@
                             <div class="buttonSensores">
                                 <div class="form-check form-switch">
 
-                                    <input type="hidden" name="acao" value="off">
+                                    <!-- <input type="hidden" name="acao" value="off"> -->
 
                                     <input
                                         class="form-check-input"
@@ -283,6 +309,7 @@
                                         value="on"
                                         onchange="this.form.submit()"
                                         <?= ($_SESSION['tomada_1'] ?? '') === 'Ligado' ? 'checked' : '' ?>>
+
 
                                 </div>
                             </div>
@@ -312,7 +339,7 @@
                             <div class="buttonSensores">
                                 <div class="form-check form-switch">
 
-                                    <input type="hidden" name="acao" value="off">
+                                    <!-- <input type="hidden" name="acao" value="off"> -->
 
                                     <input
                                         class="form-check-input"
@@ -351,7 +378,7 @@
 
                             <div class="buttonSensores">
                                 <div class="form-check form-switch">
-                                    <input type="hidden" name="acao" value="off">
+                                    <!-- <input type="hidden" name="acao" value="off"> -->
                                     <input
                                         class="form-check-input"
                                         type="checkbox"
@@ -390,7 +417,7 @@
                             <div class="buttonSensores">
                                 <div class="form-check form-switch">
 
-                                    <input type="hidden" name="acao" value="off">
+                                    <!-- <input type="hidden" name="acao" value="off"> -->
 
                                     <input
                                         class="form-check-input"
@@ -448,7 +475,9 @@
 
                                         <h4>Sensor 10HS <?= $i + 1 ?></h4>
 
-                                        <span class="sensor-status">
+                                        <span
+                                            class="sensor-status"
+                                            id="sensorStatus<?= $i ?>">
                                             <?= $statusSensor ?>
                                         </span>
 
@@ -456,7 +485,7 @@
 
                                     <div class="sensor-valor">
 
-                                        <strong>
+                                        <strong id="sensorPct<?= $i ?>">
                                             <?= number_format($pct, 1, ',', '.') ?>%
                                         </strong>
 
@@ -465,8 +494,9 @@
                                     <div class="sensor-progresso">
 
                                         <div
+                                            id="sensorBar<?= $i ?>"
                                             class="sensor-progresso-barra"
-                                            style="width: <?= max(0, min(100, $pct)) ?>%; margin-botom: 2px;">
+                                            style="width: <?= max(0, min(100, $pct)) ?>%;">
                                         </div>
 
                                     </div>
@@ -477,7 +507,7 @@
                                             Umidade do solo
                                         </span> -->
 
-                                        <span>
+                                        <span id="sensorVolt<?= $i ?>">
                                             <?= number_format($voltagem, 3, ',', '.') ?> V
                                         </span>
 
@@ -567,7 +597,11 @@
         integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
         crossorigin="anonymous"></script>
 
-    <script src="<?= base_url('Public/Js/javascript.js') ?>"></script>
+    <script>
+        const BASE_URL = "<?= base_url() ?>";
+    </script>
+    <script src="<?= base_url('/Public/Js/javascript.js') ?>"></script>
+
 
     <script>
         document.getElementById('camera').onerror = function() {

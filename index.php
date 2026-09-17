@@ -1,6 +1,6 @@
 <?php
 session_start();
-
+$_SESSION['url_rasp'] = '10.20.138.38:5000';
 require_once __DIR__ . '/Config/helpers.php';
 
 

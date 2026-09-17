@@ -32,21 +32,22 @@ class HomeController extends RenderView
     public function index()
     {
         $data = [];
+
         $data['pagina'] = "Experimento de usuario";
+
         $this->usuario->listarUsuario();
 
         if ($this->tela()) {
 
-
             $usuario_id = $_SESSION['usuarios_logado']->usuarios_id;
 
             $join = 'usuarios on usuarios_id = participantes_usuarios_id
-             INNER JOIN experimentos on experimentos_id = participantes_experimentos_id
-             INNER JOIN bancadas_experimentos on be_experimentos_id = experimentos_id
-             INNER JOIN bancadas on bancadas_id = be_bancadas_id';
+            INNER JOIN experimentos on experimentos_id = participantes_experimentos_id
+            INNER JOIN bancadas_experimentos on be_experimentos_id = experimentos_id
+            INNER JOIN bancadas on bancadas_id = be_bancadas_id';
 
             $where = "experimentos_status = 'Ativo'
-              AND participantes_usuarios_id = $usuario_id";
+            AND participantes_usuarios_id = $usuario_id";
 
             $order = 'experimentos_id DESC';
 
@@ -56,29 +57,47 @@ class HomeController extends RenderView
 
             $data['usuarioExperimento'] = $usuarioExperimento ?? '';
 
+            // ==============================
+            // DADOS DO RASPBERRY / FLASK
+            // ==============================
 
-            $sensores = [];
-            $status   = [];
-            $videoUrl = null;
+            $data['sensores'] = $this->flask->getSensores();
 
-            $status = $this->flask->getStatusDispositivos();
+            $data['videoUrl'] = $this->flask->getVideoUrl();
 
-            $sensores = [
-                'v'   => $status['solo_v'] ?? [],
-                'pct' => $status['solo_pct'] ?? []
-            ];
+            // ==============================
 
-            $videoUrl = $this->flask->getVideoUrl();
-
-            $data['sensores'] = $sensores;
-            $data['status']   = $status;
-            $data['videoUrl'] = $videoUrl;
-
-            // Carrega o dashboard com TODOS os dados necessários
             return $this->loadView('home/dashboard', $data);
         } else {
+
             return $this->loadView('home/index', $data);
         }
+    }
+
+    public function sensores()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        try {
+
+            $sensores = $this->flask->getSensores();
+
+            echo json_encode([
+                'success' => true,
+                'v'       => $sensores['v'] ?? [],
+                'pct'     => $sensores['pct'] ?? []
+            ]);
+        } catch (\Exception $e) {
+
+            http_response_code(500);
+
+            echo json_encode([
+                'success' => false,
+                'erro' => $e->getMessage()
+            ]);
+        }
+
+        exit;
     }
 
 
@@ -142,7 +161,8 @@ class HomeController extends RenderView
             $this->flask->toggleDispositivo($rota, $acao);
         } elseif ($rota === 'api/camera/toggle') {
 
-            $url = "http://192.168.1.11:5000/api/camera/toggle";
+            
+            $url = "http://".$_SESSION['url_rasp']."/api/camera/toggle";
 
             $ch = curl_init();
 
@@ -175,7 +195,7 @@ class HomeController extends RenderView
 
     function controladorTomada($tomada, $acao)
     {
-        $url = "http://192.168.1.11:5000/toggle_pin_{$tomada}?acao={$acao}";
+        $url = "http://".$_SESSION['url_rasp']."/toggle_pin_{$tomada}?acao={$acao}";
 
         $ch = curl_init();
 
@@ -203,8 +223,9 @@ class HomeController extends RenderView
     }
 
 
-    public function ligarCamera() {
-        $url = "http://192.168.1.11:5000/toggle_camera";
+    public function ligarCamera()
+    {
+        $url = "http://".$_SESSION['url_rasp']."/toggle_camera";
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
