@@ -33,7 +33,14 @@ class Database
     {
         try {
 
-            $this->conection = new PDO("mysql:host=" . self::HOST . ';dbname=' . self::NAME . ';port=' . self::PORT, self::USER, self::PASS);
+            // Usa variáveis de ambiente (Docker) e mantém as constantes como fallback.
+            $host = getenv('DB_HOST') ?: self::HOST;
+            $name = getenv('DB_NAME') ?: self::NAME;
+            $user = getenv('DB_USER') ?: self::USER;
+            $pass = (getenv('DB_PASS') !== false) ? getenv('DB_PASS') : self::PASS;
+            $port = getenv('DB_PORT') ?: self::PORT;
+
+            $this->conection = new PDO("mysql:host=" . $host . ';dbname=' . $name . ';port=' . $port . ';charset=utf8mb4', $user, $pass);
             $this->conection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         } catch (PDOException $e) {
             throw $e;
