@@ -1,0 +1,63 @@
+services:
+  # Banco de dados MySQL
+  db:
+    image: mysql:8.0
+    container_name: farmview-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: CEBIOHUB
+    # sql_mode permissivo: o schema é legado (MariaDB, com datas 0000-00-00),
+    # então desabilitamos o modo estrito para importar e operar sem erros.
+    command:
+      - --sql-mode=NO_ENGINE_SUBSTITUTION
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+    volumes:
+      - db_data:/var/lib/mysql
+      # O .sql é importado automaticamente na primeira inicialização do banco
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Aplicação web PHP (Farmview)
+  app:
+    build: .
+    container_name: farmview-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: CEBIOHUB
+      DB_USER: root
+      DB_PASS: root
+    ports:
+      - "8080:80"
+    volumes:
+      # Persiste as imagens de perfil enviadas pelos usuários
+      - uploads:/var/www/html/Public/uploadImages
+
+  # Interface gráfica para gerenciar o banco
+  phpmyadmin:
+    image: phpmyadmin:5.2
+    container_name: farmview-phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PMA_HOST: db
+      PMA_PORT: "3306"
+      UPLOAD_LIMIT: 64M
+    ports:
+      - "8081:80"
+
+volumes:
+  db_data:
+  uploads:
