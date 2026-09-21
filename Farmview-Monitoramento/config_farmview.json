@@ -5,5 +5,5 @@
     "sensor_referencia": 1,
     "tomada_bomba": 1,
     "intervalo_verificacao_segundos": 12,
-    "ip_aplicacao": "10.20.138.38"
+    "ip_aplicacao": "192.168.1.18"
 }

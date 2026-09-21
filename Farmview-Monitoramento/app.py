@@ -209,7 +209,9 @@ def abrir_camera():
     return None
 
 # ---------------- FLASK ----------------
+
 app = Flask(__name__)
+
 
 HTML_DADOS = """
 <!doctype html>
@@ -1487,6 +1489,16 @@ def _cleanup():
 
 
 atexit.register(_cleanup)
+
+
+@app.after_request
+def adicionar_cors(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return response
+
+
 
 if __name__ == "__main__":
     # host="0.0.0.0" permite acesso local no Raspberry e também pela rede.
