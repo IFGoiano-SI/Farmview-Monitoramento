@@ -15,7 +15,7 @@ class Database
 
     const PASS = "root";
 
-    const PORT = '3307';
+    const PORT = '3309';
 
     private ?string $tabela;
 
