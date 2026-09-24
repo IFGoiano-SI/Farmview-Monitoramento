@@ -28,10 +28,14 @@ function voltagemParaPorcentagem(voltagem) {
 
 async function atualizarSensores() {
     try {
+        console.log('Buscando sensores em:', RASP_URL);
+
         const resposta = await fetch(
             RASP_URL + '/api_sensores',
             { cache: 'no-store' }
         );
+
+        console.log('HTTP:', resposta.status);
 
         if (!resposta.ok) {
             throw new Error('Erro HTTP: ' + resposta.status);
@@ -39,62 +43,52 @@ async function atualizarSensores() {
 
         const dados = await resposta.json();
 
-        // O Flask retorna { solo_v: [v0, v1, v2, v3], ... }
+        console.log('DADOS RECEBIDOS:', dados);
+
         const tensoes = dados.solo_v ?? [];
 
         for (let i = 0; i < 4; i++) {
-
-            const voltagem    = Number(tensoes[i] ?? 0);
+            const voltagem = Number(tensoes[i] ?? 0);
             const porcentagem = voltagemParaPorcentagem(voltagem);
 
-            // VOLTAGEM
-            document.getElementById(
-                `sensorVolt${i}`
-            ).textContent =
+            console.log(
+                `Sensor ${i + 1}:`,
+                voltagem,
+                porcentagem
+            );
+
+            document.getElementById(`sensorVolt${i}`).textContent =
                 voltagem.toFixed(3).replace('.', ',') + ' V';
 
-            // PORCENTAGEM
-            document.getElementById(
-                `sensorPct${i}`
-            ).textContent =
+            document.getElementById(`sensorPct${i}`).textContent =
                 porcentagem.toFixed(1).replace('.', ',') + '%';
 
-            // BARRA
-            document.getElementById(
-                `sensorBar${i}`
-            ).style.width =
+            document.getElementById(`sensorBar${i}`).style.width =
                 Math.max(0, Math.min(100, porcentagem)) + '%';
 
-            // STATUS
-            let status = '';
+            let status;
 
             if (porcentagem < 35) {
-                status = 'Baixo';
+                status = 'Baixa';
             } else if (porcentagem < 70) {
                 status = 'Ideal';
             } else {
                 status = 'Alta';
             }
 
-            document.getElementById(
-                `sensorStatus${i}`
-            ).textContent = status;
+            document.getElementById(`sensorStatus${i}`).textContent =
+                status;
         }
 
     } catch (erro) {
-        console.error(
-            'Erro ao atualizar sensores:',
-            erro
-        );
+        console.error('ERRO SENSOR:', erro);
     }
 }
 
-// Atualiza imediatamente
 atualizarSensores();
 
-// Depois atualiza automaticamente a cada 1 segundo
-setInterval(atualizarSensores, 1000);
-
+// NÃO coloque o setInterval ainda
+// setInterval(atualizarSensores, 1000);
 
 
 

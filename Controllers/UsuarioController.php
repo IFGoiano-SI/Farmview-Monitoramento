@@ -100,7 +100,7 @@ class UsuarioController extends RenderView
                 'color' => 'danger',
             ];
 
-          
+
 
             return $this->loadView('login/cadastro', $data);
         }
@@ -132,6 +132,88 @@ class UsuarioController extends RenderView
 
 
         ];
+
+        $emailUsuario = $values['usuarios_email'];
+
+        $where = "usuarios_email = '$emailUsuario'";
+
+        $usuarioEmail = $this->usuario->select(null, $where)->fetchObject();
+
+
+        // 
+
+        // Se cadastrar sem nome
+        if (empty($values['usuarios_nome'])) {
+            $_SESSION['msg'] = [
+                'texto' => 'O campo nome não pode ser vazio!',
+                'color' => 'danger',
+            ];
+
+            return $this->loadView('login/cadastro', $data);
+        }
+
+        // Cadastrar nomes menores que 3 caracteres
+        if (strlen($values['usuarios_nome']) < 3) {
+            $_SESSION['msg'] = [
+                'texto' => 'O campo nome precisa ter mais de 3 caracteres!',
+                'color' => 'danger',
+            ];
+
+            return $this->loadView('login/cadastro', $data);
+        }
+
+
+        // Cadatrar nomes maiores que 40 caracteres
+        if (strlen($values['usuarios_nome']) > 40) {
+            $_SESSION['msg'] = [
+                'texto' => 'O campo nome precisa ter menos de 40 caracteres!',
+                'color' => 'danger',
+            ];
+
+            return $this->loadView('login/cadastro', $data);
+        }
+
+        // Se a escolaridade vier vazia
+        if (empty($values['usuarios_escolaridade'])) {
+            $_SESSION['msg'] = [
+                'texto' => 'Escolha o grau de escolaridade',
+                'color' => 'danger',
+            ];
+
+            return $this->loadView('login/cadastro', $data);
+        }
+
+        // Validação do email do usuario
+        if (!filter_var($values['usuarios_email'], FILTER_VALIDATE_EMAIL)) {
+            $_SESSION['msg'] = [
+                'texto' => 'Formato de email inválido!',
+                'color' => 'danger',
+            ];
+
+            return $this->loadView('login/cadastro', $data);
+        }
+
+        if ($usuarioEmail) {
+            $_SESSION['msg'] = [
+                'texto' => 'Email ja cadastrado!',
+                'color' => 'danger',
+            ];
+
+            return $this->loadView('login/cadastro', $data);
+        }
+
+
+        // Validação de senha
+
+        if (strlen($values['usuarios_senha']) < 5) {
+            $_SESSION['msg'] = [
+                'texto' => 'Não é permitido criar uma senha com menos de 5 caracteres!',
+                'color' => 'danger',
+            ];
+
+            return $this->loadView('login/cadastro', $data);
+        }
+
 
 
 
