@@ -149,7 +149,7 @@ class UsuarioController extends RenderView
                 'color' => 'danger',
             ];
 
-            return $this->loadView('login/cadastro', $data);
+            return $this->loadView('login/cadastro', []);
         }
 
         // Cadastrar nomes menores que 3 caracteres
@@ -159,7 +159,7 @@ class UsuarioController extends RenderView
                 'color' => 'danger',
             ];
 
-            return $this->loadView('login/cadastro', $data);
+            return $this->loadView('login/cadastro', []);
         }
 
 
@@ -170,7 +170,7 @@ class UsuarioController extends RenderView
                 'color' => 'danger',
             ];
 
-            return $this->loadView('login/cadastro', $data);
+            return $this->loadView('login/cadastro', []);
         }
 
         // Se a escolaridade vier vazia
@@ -180,7 +180,7 @@ class UsuarioController extends RenderView
                 'color' => 'danger',
             ];
 
-            return $this->loadView('login/cadastro', $data);
+            return $this->loadView('login/cadastro', []);
         }
 
         // Validação do email do usuario
@@ -190,7 +190,7 @@ class UsuarioController extends RenderView
                 'color' => 'danger',
             ];
 
-            return $this->loadView('login/cadastro', $data);
+            return $this->loadView('login/cadastro', []);
         }
 
         if ($usuarioEmail) {
@@ -199,7 +199,7 @@ class UsuarioController extends RenderView
                 'color' => 'danger',
             ];
 
-            return $this->loadView('login/cadastro', $data);
+            return $this->loadView('login/cadastro', []);
         }
 
 
@@ -211,10 +211,16 @@ class UsuarioController extends RenderView
                 'color' => 'danger',
             ];
 
-            return $this->loadView('login/cadastro', $data);
+            return $this->loadView('login/cadastro', []);
         }
 
+        // echo '<pre>';
 
+        // var_dump($emailUsuario);
+        // var_dump($where);
+        // var_dump($usuarioEmail);
+
+        // exit;
 
 
         if ($this->usuario->insert($values)) {
@@ -232,7 +238,7 @@ class UsuarioController extends RenderView
                 'color' => 'danger',
             ];
 
-            return $this->loadView('login/cadastro', $data);
+            return $this->loadView('login/cadastro', []);
         }
     }
 
