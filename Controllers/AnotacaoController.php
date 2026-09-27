@@ -7,6 +7,9 @@ use Models\Database as Conexao;
 use \PDO;
 use Ultis\RenderView;
 
+use Dompdf\Dompdf;
+use Dompdf\Options;
+
 
 class AnotacaoController extends RenderView
 {
@@ -143,5 +146,40 @@ class AnotacaoController extends RenderView
         $where = "usuarios_id = '$usuariosId' and experimentos_status='Ativo'";
 
         return $this->participantes->select($join, $where)->fetch(PDO::FETCH_OBJ);
+    }
+
+
+    public function exportarPdf()
+    {
+        $conteudoHtml = $_POST['anotacoes_conteudo'] ?? ''; // vem do textarea do TinyMCE
+
+
+        $html = '
+            <!DOCTYPE html>
+            <html lang="pt-br">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: DejaVu Sans, sans-serif; font-size: 12px; line-height: 1.5; }
+                    ul, ol { padding-left: 24px; margin: 8px 0; }
+                    li { margin-bottom: 8px; }
+                    li p { display: inline; margin: 0; padding: 0; }
+                </style>
+            </head>
+            <body>' . $conteudoHtml . '</body>
+            </html>';
+
+
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true); // permite imagens externas, se precisar
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $dompdf->stream('documento.pdf', ['Attachment' => true]);
+        exit();
     }
 }

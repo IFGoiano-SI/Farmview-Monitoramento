@@ -341,18 +341,18 @@
                                                             </div>
                                                         </div>
 
-                                                        <div class="conteudo-modal">
+                                                        <!-- <div class="conteudo-modal">
                                                             <h5 class="mt-2 mb-2">Anotações do experimento</h5>
                                                             <hr>
 
-                                                            <?php if (!empty($experimentoAtivos->anotacoes_conteudo)): ?>
-                                                                <p> <?= mb_substr($experimentoAtivos->anotacoes_conteudo, 0, 1200, 'UTF-8') ?></p>
+                                                            <//?php if (!empty($experimentoAtivos->anotacoes_conteudo)): ?>
+                                                                <p> <//?= mb_substr($experimentoAtivos->anotacoes_conteudo, 0, 1200, 'UTF-8') ?></p>
 
-                                                            <?php else: ?>
+                                                            <//?php else: ?>
                                                                 <h6>Não há anotação referente a este experimento!</h6>
 
-                                                            <?php endif; ?>
-                                                        </div>
+                                                            <//?php endif; ?>
+                                                        </div> -->
 
                                                     </div>
 
@@ -440,18 +440,7 @@
                                                             </div>
                                                         </div>
 
-                                                        <div class="conteudo-modal mt-3">
-                                                            <h5 class="mt-2 mb-2">Anotações do experimento</h5>
-                                                            <hr>
-
-                                                            <?php if (!empty($experimentoFinalizado->anotacoes_conteudo)): ?>
-                                                                <p> <?= mb_substr($experimentoFinalizado->anotacoes_conteudo, 0, 500, 'UTF-8') ?></p>
-
-                                                            <?php else: ?>
-                                                                <h6>Não há anotação referente a este experimento!</h6>
-
-                                                            <?php endif; ?>
-                                                        </div>
+                                                        
 
                                                     </div>
 

@@ -1203,7 +1203,7 @@ p {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         grid-template-rows: repeat(2, 1fr);
-        
+
 
         gap: 0px;
     }
@@ -1919,4 +1919,37 @@ p {
 
     }
 
+}
+
+/* Botao exportar */
+.exportar {
+    display: flex;
+    justify-content: flex-end;
+    padding-right: 60px;
+
+}
+.btn-exportar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background-color: var(--corVermelha);
+    color: #fdfdfd;
+    border: 1px solid #dadce0;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-exportar:hover {
+    background-color: #f8f9fa;
+    color: black;
+}
+
+
+.btn-exportar i {
+    font-size: 16px;
 }

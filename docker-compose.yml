@@ -41,6 +41,7 @@ services:
       - "8080:80"
     volumes:
       # Persiste as imagens de perfil enviadas pelos usuários
+      - .:/var/www/html
       - uploads:/var/www/html/Public/uploadImages
 
   # Interface gráfica para gerenciar o banco

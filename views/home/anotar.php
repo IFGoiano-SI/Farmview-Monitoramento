@@ -17,6 +17,13 @@
 
     <style>
 
+        .telaAnotacao {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-flow: column wrap;
+        }
+
     </style>
 </head>
 
@@ -116,19 +123,29 @@
 
             <?php endif; ?>
 
+            <form action="<?= base_url('anotacao/exportarPdf') ?>" method="post" id="formExportar">
+                <div class="exportar mt-3">
+                    <input type="hidden" name="anotacoes_conteudo" id="conteudo-exportar">
+                    <button type="submit" class="btn-exportar"><i class="bi bi-file-earmark-pdf-fill"></i> Exportar</button>
+
+                </div>
+            </form>
+
             <!-- ===================== ANOTAÇÃO ===================== -->
             <form action="<?= base_url('anotacao/salvar') ?>" method="post">
-                <div class="telaAnotacao mt-5">
+                <div class="telaAnotacao mt-2">
                     <input type="hidden" name="experimento_id" value="<?= $dadosAnotacao->experimentos_id ?>">
                     <input type="hidden" name="anotacao_id" value="<?= $anotacao->anotacoes_id ?? '' ?>">
 
-                    <textarea id="my-text-area" class="anotacao" name="anotacoes_conteudo"><?= $anotacao->anotacoes_conteudo ?? '' ?></textarea>
+                    <textarea style="width: 80%;" id="my-text-area" class="anotacao" name="anotacoes_conteudo"><?= $anotacao->anotacoes_conteudo ?? '' ?></textarea>
 
                     <div class="text-center mt-3">
                         <button type="submit" class="btnAnotacao">Salvar anotação</button>
+
                     </div>
                 </div>
             </form>
+
 
         </div>
 
@@ -173,14 +190,41 @@
         integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
         crossorigin="anonymous"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
-    <script>
-        const easymde = new EasyMDE({
-            element: document.getElementById('my-text-area'),
-        });
+    <script src="https://cdn.tiny.cloud/1/o6z5ag4bp5rs2fcu26yt81z9zyy2juzfw464xmplay588s0l/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 
-        document.querySelector('form').addEventListener('submit', function() {
-            easymde.codemirror.save();
+    <script>
+        tinymce.init({
+            selector: '#my-text-area',
+            height: 600,
+
+            plugins: [
+                'advlist',
+                'autolink',
+                'lists',
+                'link',
+                'image',
+                'table',
+                'media',
+                'fullscreen',
+                'wordcount'
+            ],
+
+            toolbar: 'undo redo | bold italic underline | ' +
+                'alignleft aligncenter alignright alignjustify | ' +
+                'bullist numlist | link image table | fullscreen',
+
+            menubar: 'edit insert format tools table'
+        });
+    </script>
+
+
+    <script>
+        document.getElementById('formExportar').addEventListener('submit', function() {
+            const editor = tinymce.get('my-text-area');
+
+            document.getElementById('conteudo-exportar').value = editor ?
+                editor.getContent() :
+                document.getElementById('my-text-area').value;
         });
     </script>
 

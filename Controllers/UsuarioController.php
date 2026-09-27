@@ -140,8 +140,6 @@ class UsuarioController extends RenderView
         $usuarioEmail = $this->usuario->select(null, $where)->fetchObject();
 
 
-        // 
-
         // Se cadastrar sem nome
         if (empty($values['usuarios_nome'])) {
             $_SESSION['msg'] = [
