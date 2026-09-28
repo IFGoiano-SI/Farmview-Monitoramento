@@ -161,8 +161,8 @@ class HomeController extends RenderView
             $this->flask->toggleDispositivo($rota, $acao);
         } elseif ($rota === 'api/camera/toggle') {
 
-            
-            $url = "http://".$_SESSION['url_rasp']."/api/camera/toggle";
+
+            $url = "http://" . $_SESSION['url_rasp'] . "/api/camera/toggle";
 
             $ch = curl_init();
 
@@ -195,7 +195,7 @@ class HomeController extends RenderView
 
     function controladorTomada($tomada, $acao)
     {
-        $url = "http://".$_SESSION['url_rasp']."/toggle_pin_{$tomada}?acao={$acao}";
+        $url = "http://" . $_SESSION['url_rasp'] . "/toggle_pin_{$tomada}?acao={$acao}";
 
         $ch = curl_init();
 
@@ -225,8 +225,7 @@ class HomeController extends RenderView
 
     public function ligarCamera()
     {
-        #$url = "http://".$_SESSION['url_rasp']."/toggle_camera";
-        $url = "http://10.20.138.38:5000/toggle_camera";
+        $url = "http://".$_SESSION['url_rasp']."/toggle_camera";
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

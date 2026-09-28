@@ -253,7 +253,7 @@
                         <div class="cam">
                             <img id="camera"
                                 style="width: 100%; height: 100%;"
-                                src="http://<?= $_SESSION['url_rasp']?>/video_feed"
+                                src="http://<?= $_SESSION['url_rasp'] ?>/video_feed"
                                 alt="Câmera indisponível">
                         </div>
                     </form>
@@ -598,8 +598,12 @@
         crossorigin="anonymous"></script>
 
     <script>
-        const BASE_URL  = "<?= base_url() ?>";
-        const RASP_URL  = "http://<?= $_SESSION['url_rasp'] ?>";
+        const BASE_URL = "<?= base_url() ?>";
+        const RASP_URL = "http://<?= $_SESSION['url_rasp'] ?>";
+    </script>
+
+    <script>
+        window.SENSORES_URL = <?= json_encode(base_url('home/sensores')) ?>;
     </script>
     <script src="<?= base_url('/Public/Js/javascript.js') ?>"></script>
 

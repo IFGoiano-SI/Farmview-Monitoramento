@@ -26,36 +26,36 @@ function voltagemParaPorcentagem(voltagem) {
     return Math.round(Math.max(0, Math.min(100, porcentagem)) * 100) / 100;
 }
 
+let atualizacaoAtiva = true;
+
 async function atualizarSensores() {
+    const controlador = new AbortController();
+    const limite = setTimeout(() => controlador.abort(), 3000);
+
     try {
-        console.log('Buscando sensores em:', RASP_URL);
+        const resposta = await fetch(window.SENSORES_URL, {
+            cache: 'no-store',
+            signal: controlador.signal
 
-        const resposta = await fetch(
-            RASP_URL + '/api_sensores',
-            { cache: 'no-store' }
-        );
-
-        console.log('HTTP:', resposta.status);
+        });
 
         if (!resposta.ok) {
-            throw new Error('Erro HTTP: ' + resposta.status);
+            throw new Error(`HTTP ${resposta.status}`);
         }
 
         const dados = await resposta.json();
 
-        console.log('DADOS RECEBIDOS:', dados);
-
-        const tensoes = dados.solo_v ?? [];
+        if (!dados.success || !Array.isArray(dados.v) || dados.v.length < 4) {
+            throw new Error('Leituras dos sensores ausentes');
+        }
 
         for (let i = 0; i < 4; i++) {
-            const voltagem = Number(tensoes[i] ?? 0);
-            const porcentagem = voltagemParaPorcentagem(voltagem);
+            const voltagem = Number(dados.v[i]);
+            const porcentagem = Number(dados.pct[i]);
 
-            console.log(
-                `Sensor ${i + 1}:`,
-                voltagem,
-                porcentagem
-            );
+            if (!Number.isFinite(voltagem) || !Number.isFinite(porcentagem)) {
+                continue;
+            }
 
             document.getElementById(`sensorVolt${i}`).textContent =
                 voltagem.toFixed(3).replace('.', ',') + ' V';
@@ -66,24 +66,21 @@ async function atualizarSensores() {
             document.getElementById(`sensorBar${i}`).style.width =
                 Math.max(0, Math.min(100, porcentagem)) + '%';
 
-            let status;
-
-            if (porcentagem < 35) {
-                status = 'Baixa';
-            } else if (porcentagem < 70) {
-                status = 'Ideal';
-            } else {
-                status = 'Alta';
-            }
-
             document.getElementById(`sensorStatus${i}`).textContent =
-                status;
+                porcentagem < 35 ? 'Baixa' :
+                    porcentagem < 70 ? 'Ideal' : 'Alta';
         }
-
     } catch (erro) {
-        console.error('ERRO SENSOR:', erro);
+        console.error('Falha na leitura dos sensores:', erro);
+    } finally {
+        clearTimeout(limite);
+
+        if (atualizacaoAtiva) {
+            setTimeout(atualizarSensores, 3000);
+        }
     }
 }
+
 
 atualizarSensores();
 
