@@ -3,6 +3,8 @@ import threading
 import atexit
 import time
 import os
+import glob
+import subprocess
 import sqlite3
 from datetime import datetime
 
@@ -228,8 +230,19 @@ def atualizar_sensores():
 # ---------------- CÂMERA ----------------
 camera = None
 camera_on = False
+
+# ---- Estado da gravação ----
+# Tudo isto é protegido por `lock`. A escrita dos frames acontece na thread de
+# captura (capturar_camera), então a gravação independe de haver alguém com o
+# dashboard aberto.
 gravando = False
 video_writer = None
+gravacao_atual = None      # nome do arquivo .avi em andamento
+gravacao_inicio = None     # time.time() do início
+frames_gravados = 0        # usado para calcular o FPS real na conversão
+
+PASTA_GRAVACOES = os.path.join(os.getcwd(), "gravacoes")
+os.makedirs(PASTA_GRAVACOES, exist_ok=True)
 
 # A captura/compressão da câmera acontece fora da requisição HTTP.
 camera_lock = threading.Lock()
@@ -257,7 +270,7 @@ def abrir_camera():
 
 def capturar_camera():
     """Captura um único fluxo da câmera e deixa o último JPEG pronto para /video_feed."""
-    global camera, camera_on, ultimo_frame_jpeg, video_writer
+    global camera, camera_on, ultimo_frame_jpeg, video_writer, frames_gravados
 
     fps = 15.0
     fourcc = cv2.VideoWriter_fourcc(*"XVID")
@@ -275,13 +288,13 @@ def capturar_camera():
                 continue
 
             with lock:
-                if gravando:
+                if gravando and gravacao_atual:
                     if video_writer is None:
                         h, w = frame.shape[:2]
-                        video_writer = cv2.VideoWriter(
-                            "gravacao.avi", fourcc, fps, (w, h)
-                        )
+                        caminho = os.path.join(PASTA_GRAVACOES, gravacao_atual)
+                        video_writer = cv2.VideoWriter(caminho, fourcc, fps, (w, h))
                     video_writer.write(frame)
+                    frames_gravados += 1
                 elif video_writer is not None:
                     video_writer.release()
                     video_writer = None
@@ -302,6 +315,89 @@ def capturar_camera():
         except Exception as exc:
             print(f"[ERRO CÂMERA] {exc}")
             time.sleep(0.5)
+
+
+# ---------------- GRAVAÇÃO ----------------
+def _fechar_writer():
+    """Fecha o arquivo de vídeo. Chamar SEMPRE com `lock` já adquirido."""
+    global video_writer
+    if video_writer is not None:
+        video_writer.release()
+        video_writer = None
+
+
+def converter_para_mp4(avi_path, fps_real):
+    """
+    Converte o .avi (XVID) para .mp4 (H.264), que o navegador consegue tocar.
+    Usa o FPS real medido na gravação para o vídeo não sair acelerado/lento.
+    Se o ffmpeg não estiver instalado, devolve o próprio .avi.
+    """
+    mp4_path = avi_path.rsplit(".", 1)[0] + ".mp4"
+    try:
+        cmd = ["ffmpeg", "-y"]
+        if fps_real:
+            cmd += ["-r", f"{fps_real:.2f}"]   # antes do -i: assume esse FPS na entrada
+        cmd += [
+            "-i", avi_path,
+            "-c:v", "libx264",
+            "-preset", "ultrafast",
+            "-pix_fmt", "yuv420p",
+            "-movflags", "+faststart",
+            mp4_path,
+        ]
+        subprocess.run(cmd, check=True, capture_output=True, timeout=300)
+        os.remove(avi_path)
+        return os.path.basename(mp4_path)
+    except Exception as exc:
+        print(f"[AVISO] Conversão para mp4 falhou ({exc}). Mantendo o .avi.")
+        return os.path.basename(avi_path)
+
+
+def iniciar_gravacao():
+    """Retorna (True, nome_do_arquivo) ou (False, mensagem_de_erro)."""
+    global gravando, gravacao_atual, gravacao_inicio, frames_gravados
+
+    if not camera_on or camera is None:
+        return False, "Câmera desligada"
+
+    with lock:
+        if gravando:
+            return False, "Já está gravando"
+
+        gravacao_atual = datetime.now().strftime("rec_%Y%m%d_%H%M%S.avi")
+        gravacao_inicio = time.time()
+        frames_gravados = 0
+        gravando = True
+
+    print(f"[INFO] Gravação iniciada: {gravacao_atual}")
+    return True, gravacao_atual
+
+
+def finalizar_gravacao():
+    """Retorna (dados, None) em caso de sucesso ou (None, mensagem_de_erro)."""
+    global gravando, gravacao_atual
+
+    with lock:
+        gravando = False
+        _fechar_writer()
+        nome = gravacao_atual
+        inicio = gravacao_inicio
+        frames = frames_gravados
+        gravacao_atual = None
+
+    if not nome:
+        return None, "Nenhuma gravação em andamento"
+
+    avi_path = os.path.join(PASTA_GRAVACOES, nome)
+    if frames == 0 or not os.path.exists(avi_path):
+        return None, "Nenhum frame foi gravado"
+
+    duracao = time.time() - inicio
+    fps_real = frames / duracao if duracao > 0 else None
+    arquivo_final = converter_para_mp4(avi_path, fps_real)
+
+    print(f"[INFO] Gravação finalizada: {arquivo_final} ({int(duracao)}s)")
+    return {"arquivo": arquivo_final, "duracao": int(duracao)}, None
 
 
 # ---------------- FLASK ----------------
@@ -817,7 +913,7 @@ window.onload = refreshSensores;
                         {{ 'Parar Gravação' if gravando else 'Iniciar Gravação' }}
                     </button>
                 </form>
-                <a class="btn btn-outline-secondary" href="/gravacao.avi" download><i class="bi bi-arrow-down-circle"></i> Baixar último vídeo</a>
+                <a class="btn btn-outline-secondary" href="{{ url_for('baixar_ultima_gravacao') }}" download><i class="bi bi-arrow-down-circle"></i> Baixar último vídeo</a>
             </div>
             <div class="camera-container mt-1">
                 {% if camera_on %}
@@ -1342,6 +1438,12 @@ def health():
     return jsonify({"status": "ok", "modo": MODO_EXECUCAO, "gpio_real": GPIO_REAL, "ads_real": ADS_REAL})
 
 
+@app.route("/status")
+def status():
+    # Estado real da câmera/gravação, para o PHP não depender só de sessão.
+    return jsonify({"camera_on": camera_on, "gravando": gravando})
+
+
 # ---------------- ROTAS RELÉS ----------------
 @app.route("/")
 def index():
@@ -1455,6 +1557,11 @@ def toggle_camera():
         if camera_on:
             print("[INFO] Câmera ativada.")
     else:
+        # Se estiver gravando, fecha e converte o arquivo ANTES de desligar,
+        # senão o vídeo ficaria corrompido.
+        if gravando:
+            finalizar_gravacao()
+
         # Sinaliza a thread antes de liberar o dispositivo.
         camera_on = False
         time.sleep(0.2)
@@ -1506,31 +1613,61 @@ def video_feed():
     )
 
 
-# @app.route("/gravar", methods=["POST"])
-# def gravar():
-#     global gravando
-#     with lock:
-#         gravando = (not gravando) if camera_on else False
-#     return redirect(url_for("index"))
+# ---------------- ROTAS GRAVAÇÃO ----------------
+@app.route("/start_recording", methods=["POST"])
+def start_recording():
+    """API para o PHP: inicia a gravação (só com a câmera ligada)."""
+    ok, info = iniciar_gravacao()
+    if not ok:
+        return jsonify({"erro": info}), 409
+    return jsonify({"ok": True, "arquivo": info})
 
-@app.route('/gravar', methods=['POST'])
+
+@app.route("/stop_recording", methods=["POST"])
+def stop_recording():
+    """API para o PHP: para, converte para mp4 e devolve o nome do arquivo."""
+    dados, erro = finalizar_gravacao()
+    if erro:
+        return jsonify({"erro": erro}), 409
+    return jsonify({"ok": True, **dados})
+
+
+@app.route("/gravar", methods=["POST"])
 def gravar():
-    global gravando
-
+    """Botão do painel do próprio Flask: alterna início/parada da gravação."""
     if not camera_on:
-        return redirect(url_for('index'))
+        return redirect(url_for("index"))
 
-    with lock:
-        gravando = not gravando
+    if gravando:
+        finalizar_gravacao()
+    else:
+        iniciar_gravacao()
 
-    return redirect(url_for('index'))
+    return redirect(url_for("index"))
 
 
-@app.route("/gravacao.avi")
-def baixar_gravacao():
-    if os.path.exists("gravacao.avi"):
-        return send_from_directory(os.getcwd(), "gravacao.avi", as_attachment=True)
-    return "Ainda não há gravação", 404
+@app.route("/gravacoes/<path:nome>")
+def servir_gravacao(nome):
+    """Entrega o arquivo para o PHP baixar (send_from_directory bloqueia path traversal)."""
+    return send_from_directory(PASTA_GRAVACOES, nome)
+
+
+@app.route("/ultima_gravacao")
+def baixar_ultima_gravacao():
+    """Botão 'Baixar último vídeo' do painel: pega o arquivo mais recente da pasta."""
+    arquivos = [
+        f for f in glob.glob(os.path.join(PASTA_GRAVACOES, "rec_*"))
+        if f.endswith((".mp4", ".avi"))
+    ]
+    if not arquivos:
+        return "Ainda não há gravação", 404
+
+    mais_recente = max(arquivos, key=os.path.getmtime)
+    return send_from_directory(
+        PASTA_GRAVACOES,
+        os.path.basename(mais_recente),
+        as_attachment=True,
+    )
 
 
 # ---------------- SENSORES ----------------
@@ -1570,7 +1707,7 @@ def configuracoes():
 
 # ---------------- CLEANUP ----------------
 def _cleanup():
-    global video_writer, camera, camera_on, gravando, ultimo_frame_jpeg
+    global camera, camera_on, gravando, ultimo_frame_jpeg
 
     print("[INFO] Encerrando FarmView...")
     camera_on = False
@@ -1578,9 +1715,7 @@ def _cleanup():
 
     try:
         with lock:
-            if video_writer is not None:
-                video_writer.release()
-                video_writer = None
+            _fechar_writer()
 
         if camera is not None:
             camera.release()
@@ -1648,4 +1783,3 @@ if __name__ == "__main__":
         use_reloader=False,
         threaded=True,
     )
-

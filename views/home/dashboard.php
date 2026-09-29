@@ -66,6 +66,23 @@
             box-shadow: none;
             border-color: #aaa;
         }
+
+        .gravacao {
+            width: 170px;
+            height: 40px;
+            border-radius: 8px;
+            border: none;
+            background-color: #1893a8;
+            color: white;
+            font-size: 13pt;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3 ease;
+
+        }
     </style>
 </head>
 
@@ -139,6 +156,7 @@
                         <a href="<?= base_url('experimento/editar/' . $usuarioExperimento->experimentos_id) ?>">
                             <img id="imagePerson" src="<?= base_url($foto) ?>" alt="Foto de perfil">
                         </a>
+
 
                         <button type="button" class="btn-logout" data-bs-toggle="modal" data-bs-target="#meuModalSair">
                             Sair <i class="bi bi-box-arrow-right"></i>
@@ -259,11 +277,28 @@
                     </form>
 
                     <div class="buttonCam">
+                        <form id="formGravacao">
+                            <input type="hidden" name="experimentos_id"
+                                value="<?= (int) $usuarioExperimento->experimentos_id ?>">
+
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="gravarTela"
+                                    <?= $gravando ? 'checked' : '' ?>
+                                    <?= !$camera_on ? 'disabled' : '' ?>>
+                                <label class="form-check-label" for="gravarTela" id="labelGravar">
+                                    <?= $gravando ? 'Gravando...' : 'Gravar vídeo' ?>
+                                </label>
+                            </div>
+                        </form>
+
+
+
                         <button type="submit" form="formCamera" name="acao" value="on" class="OnCam">
                             Ligar câmera <i class="bi bi-camera-video"></i>
                         </button>
 
-                        <button type="submit" form="formCamera" name="acao" value="off" class="OffCam">
+                        <button type="submit" form="formCamera" name="acao" value="off" class="OffCam"
+                            <?= $gravando ? 'disabled title="Pare a gravação antes de desligar a câmera"' : '' ?>>
                             Desligar câmera <i class="bi bi-camera-video-off"></i>
                         </button>
                     </div>
@@ -615,5 +650,6 @@
     </script>
 
 </body>
+
 
 </html>

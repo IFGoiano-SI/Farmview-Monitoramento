@@ -84,8 +84,41 @@ async function atualizarSensores() {
 
 atualizarSensores();
 
-// NÃO coloque o setInterval ainda
-// setInterval(atualizarSensores, 1000);
+const switchGravar = document.getElementById('gravarTela');
+const labelGravar = document.getElementById('labelGravar');
+
+switchGravar?.addEventListener('change', async function () {
+    const iniciando = this.checked;
+    const rota = iniciando ? 'home/iniciarGravacao' : 'home/pararGravacao';
+
+    this.disabled = true;
+    labelGravar.textContent = iniciando ? 'Iniciando...' : 'Salvando gravação...';
+
+    try {
+        const r = await fetch(BASE_URL + rota, {
+            method: 'POST',
+            body: new FormData(document.getElementById('formGravacao'))
+        });
+        const json = await r.json();
+
+        if (!r.ok) {
+            alert(json.erro || 'Erro na gravação');
+            this.checked = !iniciando;              // desfaz o switch
+            labelGravar.textContent = this.checked ? 'Gravando...' : 'Gravar vídeo';
+        } else if (json.redirect) {
+            window.location.href = json.redirect;   // parou: vai para a tela do vídeo
+            return;
+        } else {
+            labelGravar.textContent = 'Gravando...';
+        }
+    } catch (e) {
+        alert('Sem resposta do servidor');
+        this.checked = !iniciando;
+        labelGravar.textContent = this.checked ? 'Gravando...' : 'Gravar vídeo';
+    }
+
+    this.disabled = false;
+});
 
 
 

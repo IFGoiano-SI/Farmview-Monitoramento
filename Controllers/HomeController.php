@@ -18,6 +18,7 @@ class HomeController extends RenderView
     private $participantes;
     private $usuario;
     private $flask;
+    private $video;
 
 
     public function __construct()
@@ -25,6 +26,7 @@ class HomeController extends RenderView
         $this->participantes = new Conexao('participantes');
         $this->usuario = new UsuarioController();
         $this->flask = new FlaskService();
+        $this->video = new Conexao('videos_experimentos');
     }
 
 
@@ -64,6 +66,11 @@ class HomeController extends RenderView
             $data['sensores'] = $this->flask->getSensores();
 
             $data['videoUrl'] = $this->flask->getVideoUrl();
+
+            $st = $this->consultarStatusRasp();
+            $data['camera_on'] = $st['camera_on'] ?? false;
+            $data['gravando']  = $st['gravando'] ?? false;
+            $_SESSION['gravando'] = $data['gravando'];   // mantém a sessão alinhada com a realidade
 
             // ==============================
 
@@ -225,7 +232,7 @@ class HomeController extends RenderView
 
     public function ligarCamera()
     {
-        $url = "http://".$_SESSION['url_rasp']."/toggle_camera";
+        $url = "http://" . $_SESSION['url_rasp'] . "/toggle_camera";
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -234,4 +241,114 @@ class HomeController extends RenderView
 
         return $this->index();
     }
+        
+    private function chamarRasp(string $rota, int $timeout = 15): array
+    {
+        $ch = curl_init("http://" . $_SESSION['url_rasp'] . $rota);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+        $body = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        return ['code' => $code, 'data' => json_decode($body, true) ?? []];
+    }
+
+
+    public function iniciarGravacao()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $resp = $this->chamarRasp('/start_recording');
+
+        if ($resp['code'] === 0) {
+            http_response_code(503);
+            echo json_encode(['erro' => 'Sem comunicação com o sistema da câmera']);
+            exit;
+        }
+
+        if ($resp['code'] === 200) {
+            $_SESSION['gravando'] = true;
+            $_SESSION['gravacao_experimento_id'] = (int) ($_POST['experimentos_id'] ?? 0);
+        }
+
+        http_response_code($resp['code']);
+        echo json_encode($resp['data']);
+        exit;
+    }
+
+
+    private function finalizarGravacao(): array
+    {
+        set_time_limit(300);   // o Flask converte para mp4 antes de responder
+
+        $resp = $this->chamarRasp('/stop_recording', 300);
+        unset($_SESSION['gravando']);
+
+        if ($resp['code'] !== 200) {
+            return ['ok' => false, 'erro' => $resp['data']['erro'] ?? 'Falha ao parar a gravação'];
+        }
+
+        $arquivo = basename($resp['data']['arquivo']);   // basename evita path traversal
+        $pasta = dirname($_SERVER['SCRIPT_FILENAME']) . '/Public/uploads/videos/';
+
+        if (!is_dir($pasta) && !mkdir($pasta, 0775, true)) {
+            return ['ok' => false, 'erro' => 'Não foi possível criar a pasta de vídeos'];
+        }
+
+        $fp = fopen($pasta . $arquivo, 'wb');
+        if (!$fp) {
+            return ['ok' => false, 'erro' => 'Sem permissão para gravar na pasta de vídeos'];
+        }
+
+        // baixa o vídeo do computador do Flask
+        $ch = curl_init("http://" . $_SESSION['url_rasp'] . '/gravacoes/' . rawurlencode($arquivo));
+        curl_setopt($ch, CURLOPT_FILE, $fp);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 300);
+        curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        fclose($fp);
+
+        if ($code !== 200) {
+            @unlink($pasta . $arquivo);
+            return ['ok' => false, 'erro' => 'Falha ao baixar o vídeo do sistema da câmera'];
+        }
+
+        return [
+            'ok'         => true,
+            'arquivo'    => $arquivo,
+            'path_video' => 'Public/uploads/videos/' . $arquivo,
+            'duracao'    => $resp['data']['duracao'] ?? 0,
+        ];
+    }
+
+    // Temporário, só para testar. Depois vira a versão que salva no banco.
+    public function pararGravacao()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $r = $this->finalizarGravacao();
+        if (!$r['ok']) {
+            http_response_code(500);
+        }
+
+        echo json_encode($r);
+        exit;
+    }
+
+    private function consultarStatusRasp(): array
+    {
+        $ch = curl_init("http://" . $_SESSION['url_rasp'] . "/status");
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+        $body = curl_exec($ch);
+        curl_close($ch);
+
+        $d = json_decode($body, true);
+        return is_array($d) ? $d : [];
+    }
+
+    
 }
