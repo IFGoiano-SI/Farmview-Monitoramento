@@ -31,6 +31,7 @@ $routes = [
     '/home/toggleDispositivo'                   => ['HomeController', 'toggleDispositivo'],
     '/home/ligarcamera'               => ['HomeController', 'ligarCamera'],
     '/home/sensores' => ['HomeController', 'sensores'],
+    '/gravacao/index' => ['GravacaoController', 'index'],
     '/anotacao/exportarPdf' => ['AnotacaoController', 'exportarPdf'],
     '/home/gravarTela' => ['HomeController', 'gravarTela'],
 

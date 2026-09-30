@@ -241,7 +241,7 @@ class HomeController extends RenderView
 
         return $this->index();
     }
-        
+
     private function chamarRasp(string $rota, int $timeout = 15): array
     {
         $ch = curl_init("http://" . $_SESSION['url_rasp'] . $rota);
@@ -341,14 +341,19 @@ class HomeController extends RenderView
     private function consultarStatusRasp(): array
     {
         $ch = curl_init("http://" . $_SESSION['url_rasp'] . "/status");
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 3,
+        ]);
+
         $body = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        $d = json_decode($body, true);
-        return is_array($d) ? $d : [];
-    }
+        if ($code !== 200 || !$body) {
+            return [];
+        }
 
-    
+        return json_decode($body, true) ?? [];
+    }
 }

@@ -122,6 +122,8 @@
                                 <i class="bi bi-clipboard2-pulse"></i> Plantio
                             </a>
                         </li>
+
+                        <li><a class="linksDashboard" href="<?= base_url('gravacao/index') ?>"><i class="bi bi-webcam"></i> Vídeos</a></li>
                     </ul>
                 </div>
             </div>
@@ -277,6 +279,7 @@
                     </form>
 
                     <div class="buttonCam">
+                        <?php var_dump($camera_on); ?>
                         <form id="formGravacao">
                             <input type="hidden" name="experimentos_id"
                                 value="<?= (int) $usuarioExperimento->experimentos_id ?>">
