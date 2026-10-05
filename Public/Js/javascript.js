@@ -89,30 +89,41 @@ const labelGravar = document.getElementById('labelGravar');
 
 switchGravar?.addEventListener('change', async function () {
     const iniciando = this.checked;
-    const rota = iniciando ? 'home/iniciarGravacao' : 'home/pararGravacao';
+    const rota = iniciando ? 'home/iniciargravacao' : 'home/parargravacao';
 
     this.disabled = true;
     labelGravar.textContent = iniciando ? 'Iniciando...' : 'Salvando gravação...';
 
     try {
-        const r = await fetch(BASE_URL + rota, {
+        const url = BASE_URL + rota;
+        const r = await fetch(url, {
             method: 'POST',
             body: new FormData(document.getElementById('formGravacao'))
         });
-        const json = await r.json();
+
+        const texto = await r.text();
+        console.log('URL:', url, '| Status:', r.status, '| Resposta:', texto);
+
+        let json;
+        try {
+            json = JSON.parse(texto);
+        } catch {
+            throw new Error('Resposta não é JSON (status ' + r.status + '): ' + texto.substring(0, 300));
+        }
 
         if (!r.ok) {
             alert(json.erro || 'Erro na gravação');
-            this.checked = !iniciando;              // desfaz o switch
+            this.checked = !iniciando;
             labelGravar.textContent = this.checked ? 'Gravando...' : 'Gravar vídeo';
         } else if (json.redirect) {
-            window.location.href = json.redirect;   // parou: vai para a tela do vídeo
+            window.location.href = json.redirect;
             return;
         } else {
-            labelGravar.textContent = 'Gravando...';
+            labelGravar.textContent = iniciando ? 'Gravando...' : 'Gravar vídeo';
         }
     } catch (e) {
-        alert('Sem resposta do servidor');
+        console.error(e);
+        alert(e.message);
         this.checked = !iniciando;
         labelGravar.textContent = this.checked ? 'Gravando...' : 'Gravar vídeo';
     }

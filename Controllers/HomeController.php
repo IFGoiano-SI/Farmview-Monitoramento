@@ -281,7 +281,7 @@ class HomeController extends RenderView
 
     private function finalizarGravacao(): array
     {
-        set_time_limit(300);   // o Flask converte para mp4 antes de responder
+        set_time_limit(300);
 
         $resp = $this->chamarRasp('/stop_recording', 300);
         unset($_SESSION['gravando']);
@@ -290,25 +290,25 @@ class HomeController extends RenderView
             return ['ok' => false, 'erro' => $resp['data']['erro'] ?? 'Falha ao parar a gravação'];
         }
 
-        $arquivo = basename($resp['data']['arquivo']);   // basename evita path traversal
-        $pasta = dirname($_SERVER['SCRIPT_FILENAME']) . '/Public/uploads/videos/';
+        $arquivo = basename($resp['data']['arquivo']);
+
+        // raiz do projeto (Controllers/ -> ..), sem depender do SCRIPT_FILENAME
+        $pasta = dirname(__DIR__) . '/Public/UploadsVideos/';
 
         if (!is_dir($pasta) && !mkdir($pasta, 0775, true)) {
-            return ['ok' => false, 'erro' => 'Não foi possível criar a pasta de vídeos'];
+            return ['ok' => false, 'erro' => 'Não foi possível criar a pasta: ' . $pasta];
         }
 
         $fp = fopen($pasta . $arquivo, 'wb');
         if (!$fp) {
-            return ['ok' => false, 'erro' => 'Sem permissão para gravar na pasta de vídeos'];
+            return ['ok' => false, 'erro' => 'Sem permissão para gravar em: ' . $pasta];
         }
 
-        // baixa o vídeo do computador do Flask
         $ch = curl_init("http://" . $_SESSION['url_rasp'] . '/gravacoes/' . rawurlencode($arquivo));
         curl_setopt($ch, CURLOPT_FILE, $fp);
         curl_setopt($ch, CURLOPT_TIMEOUT, 300);
         curl_exec($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
         fclose($fp);
 
         if ($code !== 200) {
@@ -319,8 +319,9 @@ class HomeController extends RenderView
         return [
             'ok'         => true,
             'arquivo'    => $arquivo,
-            'path_video' => 'Public/uploads/videos/' . $arquivo,
-            'duracao'    => $resp['data']['duracao'] ?? 0,
+            'path_video' => 'Public/UploadsVideos/' . $arquivo,
+            'duracao'    => (int) ($resp['data']['duracao'] ?? 0),
+            'tamanho'    => (int) filesize($pasta . $arquivo),
         ];
     }
 
@@ -332,7 +333,32 @@ class HomeController extends RenderView
         $r = $this->finalizarGravacao();
         if (!$r['ok']) {
             http_response_code(500);
+            echo json_encode($r);
+            exit;
         }
+
+        $salvou = $this->video->insert([
+            'path_video'       => $r['path_video'],
+            'usuarios_id'      => $_SESSION['usuarios_logado']->usuarios_id,
+            'experimentos_id'  => (int) ($_SESSION['gravacao_experimento_id'] ?? 0),
+            'duracao_segundos' => $r['duracao'],
+            'tamanho_bytes'    => $r['tamanho'],
+            'videos_status'     => 'Ativo',
+            'criado_em'        => date('Y-m-d H:i:s'),
+        ]);
+
+        unset($_SESSION['gravacao_experimento_id']);
+
+        if (!$salvou) {
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'erro' => 'Vídeo baixado, mas falhou ao salvar no banco']);
+            exit;
+        }
+
+        $_SESSION['msg'] = [
+            'texto' => 'Video salvo com sucesso!',
+            'color' => 'success',
+        ];
 
         echo json_encode($r);
         exit;

@@ -279,7 +279,6 @@
                     </form>
 
                     <div class="buttonCam">
-                        <?php var_dump($camera_on); ?>
                         <form id="formGravacao">
                             <input type="hidden" name="experimentos_id"
                                 value="<?= (int) $usuarioExperimento->experimentos_id ?>">

@@ -34,6 +34,10 @@ $routes = [
     '/gravacao/index' => ['GravacaoController', 'index'],
     '/anotacao/exportarPdf' => ['AnotacaoController', 'exportarPdf'],
     '/home/gravarTela' => ['HomeController', 'gravarTela'],
+    '/home/iniciargravacao'           => ['HomeController', 'iniciarGravacao'],
+    '/home/parargravacao'             => ['HomeController', 'pararGravacao'],
+    '/gravacao/deletarUnique'         => ['GravacaoController', 'deletarGravacao'],
+    '/gravacao/deletarAll'            => ['GravacaoController', 'deletarTodasGravacao'],
 
 
 
