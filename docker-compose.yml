@@ -98,7 +98,8 @@ networks:
     driver: bridge
 
   database:
-    driver: bridge;
+    driver: bridge
+    internal: true
 
 volumes:
   db_data:
