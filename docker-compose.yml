@@ -1,5 +1,5 @@
 services:
-  # Banco de dados MySQL
+  # Container do Banco de dados MySQL
   db:
     image: mysql:8.0
     container_name: farmview-db
@@ -18,12 +18,15 @@ services:
       # O .sql é importado automaticamente na primeira inicialização do banco
       - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot" ]
       interval: 5s
       timeout: 5s
       retries: 10
 
-  # Aplicação web PHP (Farmview)
+    networks:
+      - database
+
+  # container da Aplicação web PHP (Farmview)
   app:
     build: .
     container_name: farmview-app
@@ -37,12 +40,40 @@ services:
       DB_NAME: CEBIOHUB
       DB_USER: root
       DB_PASS: root
-    ports:
-      - "8080:80"
+
+      # Definição das portas e ip de comunicação com o raspberry
+      RASPBERRY_PI: "192.168.1.18"
+      RASPBERRY_PORT: "5000"
+    # ports:
+    #   - "8080:80"
     volumes:
       # Persiste as imagens de perfil enviadas pelos usuários
       - .:/var/www/html
       - uploads:/var/www/html/Public/uploadImages
+
+    networks:
+      - web
+      - database
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: farmview-nginx
+    restart: unless-stopped
+
+    # Dependencia do container app - farmview 
+    depends_on:
+      - app
+
+    # Portas de requisição HTTP e HTTPS
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+
+    networks:
+      - web
 
   # Interface gráfica para gerenciar o banco
   phpmyadmin:
@@ -56,8 +87,18 @@ services:
       PMA_HOST: db
       PMA_PORT: "3306"
       UPLOAD_LIMIT: 64M
-    ports:
-      - "8081:80"
+
+    networks:
+      - database
+    # ports:
+    #   - "8081:80"
+
+networks:
+  web:
+    driver: bridge
+
+  database:
+    driver: bridge;
 
 volumes:
   db_data:
