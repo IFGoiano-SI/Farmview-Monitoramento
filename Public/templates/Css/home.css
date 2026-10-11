@@ -1931,17 +1931,19 @@ p {
 .btn-exportar {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     padding: 10px 20px;
     background-color: var(--corVermelha);
     color: #fdfdfd;
     border: 1px solid #dadce0;
-    border-radius: 6px;
+    border-radius: 10px;
     font-size: 14px;
     font-weight: 500;
     font-family: inherit;
     cursor: pointer;
     transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    margin-bottom: 12px;
+
 }
 
 .btn-exportar:hover {

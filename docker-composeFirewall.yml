@@ -1,0 +1,178 @@
+services:
+  # Container do Banco de dados MySQL
+  db:
+    image: mysql:8.0
+    container_name: farmview-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: CEBIOHUB
+    # sql_mode permissivo: o schema é legado (MariaDB, com datas 0000-00-00),
+    # então desabilitamos o modo estrito para importar e operar sem erros.
+    command:
+      - --sql-mode=NO_ENGINE_SUBSTITUTION
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+    volumes:
+      - db_data:/var/lib/mysql
+      # O .sql é importado automaticamente na primeira inicialização do banco
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - database
+
+  # container da Aplicação web PHP (Farmview)
+  app:
+    build: .
+    container_name: farmview-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: CEBIOHUB
+      DB_USER: root
+      DB_PASS: root
+
+      # Definição das portas e ip de comunicação com o raspberry
+      RASPBERRY_PI: "192.168.1.18"
+      RASPBERRY_PORT: "5000"
+    # ports:
+    #   - "8080:80"
+    volumes:
+      # Persiste as imagens de perfil enviadas pelos usuários
+      - .:/var/www/html
+      - uploads:/var/www/html/Public/uploadImages
+
+    networks:
+      - web
+      - database
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: farmview-nginx
+    restart: unless-stopped
+
+    # Dependencia do container app - farmview 
+    depends_on:
+      - app
+
+    # Portas de requisição HTTP e HTTPS
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+
+    networks:
+      dmz:
+        ipv4_address: 172.31.0.3
+      web:
+
+        # Interface gráfica para gerenciar o banco
+  phpmyadmin:
+    image: phpmyadmin:5.2
+    container_name: farmview-phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PMA_HOST: db
+      PMA_PORT: "3306"
+      UPLOAD_LIMIT: 64M
+
+    networks:
+      - database
+    # ports:
+    #   - "8081:80"
+
+
+  firewall:
+    build: ./docker/firewall
+    container_name: farmview-firewall
+    restart: unless-stopped
+
+    cap_add:
+      - NET_ADMIN
+
+    sysctls:
+      - net.ipv4.ip_forward=1
+
+    networks:
+      rede_cliente:
+        ipv4_address: 172.30.0.2
+
+      dmz:
+        ipv4_address: 172.31.0.2
+
+  client:
+    image: alpine:latest
+    container_name: farmview-client
+    restart: unless-stopped
+
+    cap_add:
+      - NET_ADMIN
+
+    # Atualiza o gerenciador de pacotes do alpine e instala as ferramentas principais para rodar um container teste para cliente
+    command: >
+      sh -c "apk add --no-cache curl nmap iproute2 &&
+         ip route replace 172.31.0.0/24 via 172.30.0.2 &&
+         tail -f /dev/null"
+
+    # nmap usado para escanear as portas e fazer os testes necessario do firewall
+    networks:
+      rede_cliente:
+        ipv4_address: 172.30.0.10
+        #Atribuição do ip fixo para o container cliente, servindo como teste
+
+  flask:
+    image: python:3.12-alpine
+    container_name: farmview-flask
+    restart: unless-stopped
+
+
+    #Simulação do container como raspberry
+    command: 
+      sh -c "python -m http.server 5000 --bind 0.0.0.0"
+
+    networks:
+      dmz:
+        ipv4_address: 172.31.0.4
+
+
+
+
+
+networks:
+  rede_cliente:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+  dmz:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24
+
+  web:
+    driver: bridge
+
+  database:
+    driver: bridge
+    internal: true
+
+volumes:
+  db_data:
+  uploads:
+

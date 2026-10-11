@@ -16,14 +16,12 @@
 
 
     <style>
-
         .telaAnotacao {
             display: flex;
             justify-content: center;
             align-items: center;
             flex-flow: column wrap;
         }
-
     </style>
 </head>
 
@@ -135,20 +133,21 @@
             <!-- ===================== ANOTAÇÃO ===================== -->
             <form action="<?= base_url('anotacao/salvar') ?>" method="post">
                 <div class="telaAnotacao mt-2">
+
                     <input type="hidden" name="experimento_id" value="<?= $dadosAnotacao->experimentos_id ?>">
                     <input type="hidden" name="anotacao_id" value="<?= $anotacao->anotacoes_id ?? '' ?>">
 
                     <textarea style="width: 80%;" id="my-text-area" class="anotacao" name="anotacoes_conteudo"><?= $anotacao->anotacoes_conteudo ?? '' ?></textarea>
 
-                    <div class="text-center mt-3">
+                    <div class="botaoSalvar mt-4" style="display: flex; justify-content: flex-end; width: 79%">
                         <button type="submit" class="btnAnotacao">Salvar anotação</button>
-
                     </div>
-                </div>
             </form>
-
-
         </div>
+    </div>
+
+
+    </div>
 
     </div>
 
