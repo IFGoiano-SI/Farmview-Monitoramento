@@ -255,8 +255,20 @@ Após a elaboração dos containers, segue o passo a passo para a criação do m
 
 # Passo 1: Buildar o container
 
-`docker compose -f docker-composeFirewall.yml build`
+`docker compose -f docker-composeFirewall.yml up -d build`
 Esse comando realiza a construção das imagens dos serviços farmview-app e farmview-firewall, conforme as configurações definidas no arquivo docker-composeFirewall.yml.
+`docker compose -f docker-composeFirewall.yml ps`
+Este faz a listagem das imagens e containers criados.
+
+NAME                  IMAGE                COMMAND                  SERVICE      CREATED        STATUS                 PORTS
+farmview-app          cebiohub-app         "docker-php-entrypoi…"   app          5 days ago     Up 2 hours             80/tcp
+farmview-client       alpine:latest        "sh -c 'apk add --no…"   client       2 days ago     Up 2 hours             
+farmview-db           mysql:8.0            "docker-entrypoint.s…"   db           6 days ago     Up 2 hours (healthy)   3306/tcp, 33060/tcp
+farmview-firewall     cebiohub-firewall    "/entrypoint.sh"         firewall     36 hours ago   Up 2 hours             
+farmview-flask        python:3.12-alpine   "sh -c 'python -m ht…"   flask        37 hours ago   Up 2 hours             
+farmview-nginx        nginx:1.27-alpine    "/docker-entrypoint.…"   nginx        5 days ago     Up 2 hours             0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:443->443/tcp, [::]:443->443/tcp
+farmview-phpmyadmin   phpmyadmin:5.2       "/docker-entrypoint.…"   phpmyadmin   5 days ago     Up 2 hours             80/tcp
+
 
 # Passo 2: Verificação dos Endereços IP e Interfaces de Rede do Firewal
 Após a inicialização dos containers, executa-se o comando abaixo para verificar os endereços IPv4 atribuídos às interfaces de rede do container `farmview-firewall`.
@@ -745,8 +757,7 @@ PORT     STATE    SERVICE
 5000/tcp filtered upnp
 
 Nmap done: 1 IP address (1 host up) scanned in 2.59 seconds
-
-O cliente é impedido de acessar diretamente o container do flask e é direcionado para a pagina de login do software.
+O acesso direto do cliente ao servidor HTTP simulado na porta 5000 foi bloqueado. O acesso à aplicação permanece disponível pelo Nginx na porta 80, on
 
 
 # Tabela de regras
