@@ -2,7 +2,7 @@
 **INSTITUTO FEDERAL GOIANO - CAMPUS CERES**
 
 **Data:** 15 de Outubro de 2026  
-**Docente:** Roitier Campos Gonçalves
+**Docente:** Roitier Campos Gonçalves <br>
 **Discente:** Felipe Ferreira Gomes  
 **Disciplina:** Segurança da Informação
 
