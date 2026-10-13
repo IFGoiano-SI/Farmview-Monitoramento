@@ -2,7 +2,7 @@
 **INSTITUTO FEDERAL GOIANO - CAMPUS CERES**
 
 **Data:** 15 de Outubro de 2026  
-**Docente:** Roitier Gonçalves Campos  
+**Docente:** Roitier Campos Gonçalves
 **Discente:** Felipe Ferreira Gomes  
 **Disciplina:** Segurança da Informação
 
@@ -19,11 +19,11 @@ Uma possível solução seria realizar o isolamento físico do Raspberry Pi 4 po
 O ambiente de simulação do FarmView foi estruturado utilizando Docker Compose, contendo sete containers distribuídos em redes distintas para representar a aplicação web, o banco de dados, o firewall, o cliente e o servidor HTTP simulado do Raspberry Pi 4.
 
 
-| **Container**          | **Função** |
+| **Container**          | **Função**                                                   |
 |------------------------|--------------------------------------------------------------|
 | `farmview-db`          | Armazena os dados da aplicação utilizando MySQL.             |
 | `farmview-app`         | Executa a aplicação PHP do FarmView.                         |
-| `farmview-nginx`       | Servidor web responsável por receber requisições HTTP/HTTPS. |
+| `farmview-nginx`       | Recebe requisições HTTP e encaminha à aplicação PHP.         |
 | `farmview-phpmyadmin`  | Permite o gerenciamento do banco de dados.                   |
 | `farmview-firewall`    | Controla e filtra o tráfego entre a rede cliente e a DMZ.    |
 | `farmview-client`      | Simula o computador de um usuário na rede.                   |
@@ -100,7 +100,9 @@ app:
 
 ### 3. Container do Servidor Web Nginx
 
-Recebe as requisições HTTP e HTTPS e encaminha as solicitações para a aplicação PHP. Está conectado às redes `dmz` e `web`.
+Servidor web responsável por receber requisições HTTP e encaminhá-las à aplicação PHP.
+
+Recebe requisições HTTP na porta 80 e encaminha as solicitações para a aplicação PHP. Está conectado às redes dmz e web. A porta 443 está publicada no Docker e liberada no firewall, mas o HTTPS ainda não está configurado no Nginx.
 
 ```yaml
 nginx:
@@ -110,10 +112,10 @@ nginx:
 
   depends_on:
     - app
-
-  ports:
-    - "80:80"
-    - "443:443"
+  
+   ports:
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:443:443"
 
   volumes:
     - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
@@ -198,8 +200,7 @@ client:
 
 ### 7. Container do Servidor HTTP Simulado (Raspberry Pi)
 
-Representa o serviço HTTP executado no Raspberry Pi 4.
-Para a simulação, utiliza a imagem Python 3.12 Alpine e executa um servidor HTTP simples na porta `5000`, permitindo testar as regras de bloqueio do firewall.
+Representa, de forma simplificada, o serviço HTTP executado no Raspberry Pi 4. Na simulação, utiliza a imagem Python 3.12 Alpine e o comando python -m http.server para disponibilizar um servidor HTTP na porta 5000 e testar as regras de bloqueio do firewall. Apesar do nome farmview-flask, esse container não executa Flask nem reproduz os endpoints reais de leitura dos sensores e controle dos atuadores do FarmView.
 
 ```yaml
 flask:
@@ -255,7 +256,7 @@ Após a elaboração dos containers, segue o passo a passo para a criação do m
 
 # Passo 1: Buildar o container
 
-`docker compose -f docker-composeFirewall.yml up -d build`
+`docker compose -f docker-composeFirewall.yml up -d --build`
 Esse comando realiza a construção das imagens dos serviços farmview-app e farmview-firewall, conforme as configurações definidas no arquivo docker-composeFirewall.yml.
 `docker compose -f docker-composeFirewall.yml ps`
 Este faz a listagem das imagens e containers criados.
@@ -297,7 +298,7 @@ O valor 1 indica que o encaminhamento de pacotes IPv4 está habilitado no kernel
 Nesta etapa, configura-se o roteamento do container farmview-client, que representa o computador de um usuário final. O objetivo é garantir que as requisições destinadas à rede DMZ (172.31.0.0/24) sejam encaminhadas ao container farmview-firewall, responsável por analisar e controlar o tráfego de acordo com as regras de segurança estabelecidas.
 
 De forma inicial, é necessário executa o comando:
-`docker exec -it farmview-cliente sh`
+`docker exec -it farmview-client sh`
 
 O comando docker exec permite executar comandos dentro de um container em funcionamento. O parâmetro -it habilita uma sessão interativa no terminal, enquanto sh inicia o interpretador de comandos do Alpine Linux.
 
@@ -317,7 +318,7 @@ Para adicionar a rota para a DMZ:
 O comando ip route permite consultar e gerenciar a tabela de roteamento do sistema operacional. Nesse caso, add adiciona uma nova rota, 172.31.0.0/24 representa a rede de destino (DMZ) e via 172.30.0.2 define o endereço IP do firewall como próximo salto. Dessa forma, sempre que o cliente tentar acessar um dispositivo pertencente à rede 172.31.0.0/24, os pacotes serão encaminhados ao firewall, que decidirá se a comunicação será permitida ou bloqueada.
 
 Para verificar se o roteamento foi configurado corretamente:
-`ip rout get 172.31.0.3`
+`ip route get 172.31.0.3`
 
 Resultado obtido:
 `172.31.0.3 via 172.30.0.2 dev eth0 src 172.30.0.10 uid 0`
@@ -340,7 +341,7 @@ O resultado demonstra que, naquele momento, a política padrão da cadeia FORWAR
 -- Primeiro teste de comunicação com o NGINX
 Em seguida, foi acessado o terminal interativo do container farmview-client, responsável por representar o computador de um usuário final:
 
-`docker exec -it farmview-cliente sh`
+`docker exec -it farmview-client sh`
 
 Dentro do container, foi realizado a requisição HTTP ao servidor Nginx, localizado no endereço 172.31.0.3, utilizando o seguinte comando:
 `curl -I --max-time 5 http://172.31.0.3`. Porem resultando em um erro: `curl: (28) Connection timed out after 5001 milliseconds`.
@@ -366,7 +367,7 @@ PING 172.30.0.2 (172.30.0.2): 56 data bytes
 Logo, o cliente consegue alcançar o container do firewall.
 
 Posteriomente a isso, foi testado o comando:
-`docker exec farmview-client ip rout get 172.31.0.3` para verificar se o cliente continua utilizando o firewall como rota DMZ.
+`docker exec farmview-client ip route get 172.31.0.3` para verificar se o cliente continua utilizando o firewall como rota DMZ.
 Resposta obita: 
 `172.31.0.3 via 172.30.0.1 dev eth0 src 172.30.0.10` Que significa que o cliente esta tentanddo acessar o NGINX pelo gateway padrão do Docker ao envés do firewall.
 
@@ -384,7 +385,7 @@ Para solucionar essa situação, foi implementada uma regra NAT com `MASQUERADE`
 
 Essa regra faz com que os pacotes encaminhados para a DMZ utilizem o endereço do firewall (`172.31.0.2`) como origem, permitindo que o Nginx envie suas respostas de volta ao firewall, que as direciona ao cliente. Após essa configuração, foi realizado novamente o teste de comunicação com o Nginx, obtendo o retorno `HTTP/1.1 302 Found`, indicando que a requisição foi recebida e que a aplicação estava redirecionando o acesso para a página de login. Dessa forma, foi possível corrigir o problema e estabelecer a comunicação entre o cliente e o Nginx através do firewall.
 
-Logo após corrigir a comunicação entre o cliente e o nginx, foi necessário adicionar o comando `ip rout replace 172.31.0.0/24 via 172.30.0.2` no container client. Essa alteração tem a finalidade de configurar automaticamente a rota para a rede DMZ através do firewall, evitando a necessidade de executar o comando de forma manual sempre que o container for recriado, em seguida, o container foi restartado.
+Logo após corrigir a comunicação entre o cliente e o nginx, foi necessário adicionar o comando `ip route replace 172.31.0.0/24 via 172.30.0.2` no container client. Essa alteração tem a finalidade de configurar automaticamente a rota para a rede DMZ através do firewall, evitando a necessidade de executar o comando de forma manual sempre que o container for recriado, em seguida, o container foi restartado.
 
 # Passo 6: Automatizar as regras do NAT
 
@@ -501,10 +502,26 @@ Permite que o cliente inicie conexões HTTP com o servidor NGINX
 Permitir HTTPS do cliente para o NGINX:
 `docker exec farmview-firewall iptables -A FORWARD -s 172.30.0.10 -d 172.31.0.3 -p tcp --dport 443 -m conntrack --ctstate NEW -j ACCEPT`
 
-Possui a mesma permissão da **permissão 2**, mas libera a porta 443, utilizada pelo HTTPS: Comunicação protegida por TLS.
+Assim como a regra anterior permite conexões na porta 80, esta permite novas conexões TCP do cliente ao Nginx na porta 443, normalmente utilizada pelo HTTPS. A regra apenas libera o tráfego no firewall; a comunicação protegida por TLS depende da configuração de certificado e HTTPS no Nginx.
 
+Para verificar a disponibilidade do serviço, executou-se `docker exec farmview-client nmap -Pn -p 80,443 172.31.0.3`. O resultado apresentou a porta 80 como open e a porta 443 como closed. A configuração do Nginx contém apenas listen 80;, indicando que o HTTPS ainda não está configurado. Portanto, a porta 443 possui liberação no firewall, mas a configuração de TLS e a validação do HTTPS permanecem como melhoria futura.
+
+listen 80;
+
+Starting Nmap 7.99 ( https://nmap.org ) at 2026-10-13 17:55 +0000
+Nmap scan report for 172.31.0.3
+Host is up (0.00019s latency).
+
+PORT    STATE  SERVICE
+80/tcp  open   http
+443/tcp closed https
+
+Nmap done: 1 IP address (1 host up) scanned in 0.57 seconds
 
 # Passo 8: Ativar o DROP nas requisições de acesso.
+
+Nesta simulação, o tráfego do container cliente destinado à DMZ é encaminhado ao firewall pela rota 172.31.0.0/24 via 172.30.0.2, sendo filtrado pelas regras da cadeia FORWARD. As portas do Nginx deixaram de ser publicadas no host para eliminar o caminho alternativo de acesso identificado durante os testes.
+
 
 **Permissão 4**
 
@@ -548,6 +565,10 @@ PORT     STATE    SERVICE
 Nmap done: 1 IP address (1 host up) scanned in 1.81 seconds
 
 Teste utilizado com o NMAP, verificando o estado dos dispositivos na rede, onde teve o objetivo de verificar a comunicação HTTP pela porta 80 e restringindo o acesso à porta 8080 que não foi autorizada nas regras.
+
+Conferindo o gateway do cliente: `docker exec farmview-client ip route`.
+
+O gateway padrão identificado foi 172.30.0.1. Ao testar http://172.30.0.1:80, obteve-se 302 Found, identificando um caminho de acesso pelo host que contornava o container firewall. Para eliminá-lo, removeu-se o bloco ports do serviço Nginx e recriou-se o container. Após a alteração, docker port farmview-nginx não apresentou portas publicadas, o acesso a 172.30.0.1:80 falhou e o acesso a 172.31.0.3 continuou retornando 302 Found.
 
 
 # Passo 9: Log com limitação de frequência
@@ -727,10 +748,41 @@ Resultado obtido:
 /cebiohub_app 172.18.0.5 
 /cebiohub_mysql 172.18.0.2 
 
-Mostra que o banco de dados não está na DMZ, e sim dentro de uma rede interna separada.
 
-MySQL 3306 -> 172.20.0.0./24
-Firewall -> 172.31.0.0/24
+O MySQL está conectado à rede interna database, separada da rede cliente e da DMZ, e não possui a porta 3306 publicada no host. Sua proteção ocorre principalmente pela segmentação da rede e pela ausência de publicação dessa porta. A regra de bloqueio TCP 3306 no container firewall atua somente sobre os pacotes que atravessam esse container; ela não filtra a comunicação direta entre a aplicação e o banco na rede database.
+
+
+**Teste negativo:** Cliente -> MySQL
+
+`docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' farmview-db`. Consultando o IP atual do banco de dados.
+
+Resultado obtido: 172.20.0.2
+
+Em seguida, executando: `docker exec farmview-client nmap -Pn -p 3306 172.20.0.2`
+
+Resultado obtido:
+Starting Nmap 7.99 ( https://nmap.org ) at 2026-10-13 17:30 +0000
+Nmap scan report for 172.20.0.2
+Host is up.
+
+PORT     STATE    SERVICE
+3306/tcp filtered mysql
+
+Nmap done: 1 IP address (1 host up) scanned in 2.59 seconds
+
+Isso indica que o Namo não conseguiu determinar se a porta estava aberta ou fechada devido à filtragem da comunicação. Esse resultado é compatível com o isolamento entre a rede cliente e a rede interna do banco, mas não comprova, isoladamente, que o bloqueio ocorreu pela regra 3306 do container firewall.
+
+
+**Teste positivo**
+
+Para realizar o teste positivo de conexão com o banco, foi utilizado: 
+
+`docker exec farmview-app php -r '$pdo = new PDO("mysql:host=db;port=3306;dbname=" . getenv("DB_NAME"), getenv("DB_USER"), getenv("DB_PASS"), [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]); echo "Conexao com MySQL realizada. SELECT 1 = " . $pdo->query("SELECT 1")->fetchColumn() . PHP_EOL;'`
+
+No qual cria uma conexão com os seviços do container db na porta 3306. getenv() lê o nome do banco, usuário e senha das variáveis de ambiente configuradas no Docker Compose. A opção ERRMODE_EXCEPTION faz o PHP apresentar um erro caso a conexão ou consulta falhe.
+
+Resultado obtido: `Conexao com MySQL realizada. SELECT 1 = 1`. O retorno 1 confirmou que a aplicação consegue acessar o MySQL pela rede interna database, mantendo a comunicação necessária ao funcionamento.
+
 
 # Passo 12 - BLoquear acesso ao flask na porta 5000
 
@@ -757,23 +809,51 @@ PORT     STATE    SERVICE
 5000/tcp filtered upnp
 
 Nmap done: 1 IP address (1 host up) scanned in 2.59 seconds
-O acesso direto do cliente ao servidor HTTP simulado na porta 5000 foi bloqueado. O acesso à aplicação permanece disponível pelo Nginx na porta 80, on
+O acesso direto do cliente ao servidor HTTP simulado na porta 5000 foi bloqueado. O acesso à aplicação permanece disponível pelo Nginx na porta 80, onde usuários não autenticados são redirecionados para a página de login.
 
 
 # Tabela de regras
 
-| **Regra**                               | **Origem → Destino**| **Porta** | **Ação** |
-|-----------------------------------------|---------------------|-----------|----------|
-| 1 - Pacotes inválidos                   | Qualquer → Qualquer | Todas     | `DROP`   |
-| 2 - Bloqueio MySQL                      | Qualquer → Qualquer | TCP 3306  | `DROP`   |
-| 3 - Registro de acesso ao Flask         | Cliente → Flask     | TCP 5000  | `LOG`    |
-| 4 - Bloqueio Flask                      | Cliente → Flask     | TCP 5000  | `DROP`   |
-| 5 - Conexões estabelecidas              | Qualquer → Qualquer | Todas     | `ACCEPT` |
-| 6 - Permitir HTTP                       | Cliente → Nginx     | TCP 80    | `ACCEPT` |
-| 7 - Permitir HTTPS                      | Cliente → Nginx     | TCP 443   | `ACCEPT` |
-| 8 - Registro de acessos não autorizados | Qualquer → Qualquer | Todas     | `LOG`    |
-| Política padrão                         | Qualquer → Qualquer | Todas     | `DROP`   |
+| **Regra**                               | **Origem → Destino**| **Porta** | **Ação** | **Justifica do négocio**                                                     |
+|-----------------------------------------|---------------------|-----------|----------|------------------------------------------------------------------------------|
+| 1 - Pacotes inválidos                   | Qualquer → Qualquer | Todas     | `DROP`   | Descartar pacotes classificados como inválidos pelo rastreamento de conexões.
+| 2 - Bloqueio MySQL                      | Qualquer → Qualquer | TCP 3306  | `DROP`   | Impedir acesso ao banco por esse caminho.
+| 3 - Registro de acesso ao Flask         | Cliente → Flask     | TCP 5000  | `LOG`    | Registrar tentativas de acesso direto ao serviço que representa o Raspberry.
+| 4 - Bloqueio Flask                      | Cliente → Flask     | TCP 5000  | `DROP`   | Impedir que o cliente acesse diretamente o serviço do dispositivo.
+| 5 - Conexões estabelecidas              | Qualquer → Qualquer | Todas     | `ACCEPT` | Permitir a continuidade e as respostas das conexões autorizadas.
+| 6 - Permitir HTTP                       | Cliente → Nginx     | TCP 80    | `ACCEPT` | Permitir acesso à interface web do FarmView
+| 7 - Permitir HTTPS                      | Cliente → Nginx     | TCP 443   | `ACCEPT` | Preparar a liberação para HTTPS, cujo serviço ainda não foi configurado.
+| 8 - Registro de acessos não autorizados | Qualquer → Qualquer | Todas     | `LOG`    | Registrar tentativas para análise, com limitação de frequência.
+| Política padrão                         | Qualquer → Qualquer | Todas     | `DROP`   | Bloquear comunicações não autorizadas explicitamente.
 
+As regras apresentadas atuam na cadeia FORWARD do container firewall. A ação LOG apenas registra o pacote; o descarte ocorre por uma regra DROP posterior ou pela política padrão. O banco também é isolado pela rede interna database e não possui a porta 3306 publicada no host.
+
+
+## Arquitetura da simulação
+
+```mermaid
+flowchart TD
+    C["Cliente — 172.30.0.10"]
+    F["Firewall — iptables e NAT"]
+    N["Nginx — DMZ — 172.31.0.3"]
+    S["Servidor HTTP simulado — 172.31.0.4"]
+    A["Aplicação PHP"]
+    D["MySQL — rede database"]
+    P["phpMyAdmin"]
+
+    C -->|"Rede cliente: firewall 172.30.0.2"| F
+    F -->|"DMZ: firewall 172.31.0.2 — HTTP 80 permitido"| N
+    F -->|"Acesso do cliente: TCP 5000 bloqueado"| S
+    N -->|"Rede web"| A
+    A -->|"Rede database — TCP 3306"| D
+    P -->|"Rede database — TCP 3306"| D
+```
+
+O cliente acessa o Nginx pela rota da DMZ através do firewall.
+O acesso direto do cliente ao servidor HTTP simulado na porta 5000
+é bloqueado. A aplicação PHP e o phpMyAdmin acessam o MySQL pela
+rede interna database. O Nginx não publica portas no host.
+A porta 443 está liberada no firewall, mas HTTPS não está configurado.
 
 
 
