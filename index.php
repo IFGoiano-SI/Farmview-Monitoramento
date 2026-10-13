@@ -1,6 +1,6 @@
 <?php
 session_start();
-$_SESSION['url_rasp'] = '192.168.1.11:5000';
+$_SESSION['url_rasp'] = '192.168.1.12:5000';
 require_once __DIR__ . '/Config/helpers.php';
 date_default_timezone_set('America/Sao_Paulo');
 

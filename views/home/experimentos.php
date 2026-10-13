@@ -181,7 +181,7 @@
 
             <div class="leftScreenTop">
                 <div class="logo">
-                    <img src="<?= base_url('Public/templates/ImageSistema/LogoPreta.png') ?>" alt="Logo CEBIO">
+                    <a href="<?= base_url('home/tela') ?>"><img src="<?= base_url('Public/templates/ImageSistema/LogoPreta.png') ?>" alt="Logo CEBIO"></a>
                 </div>
 
                 <div class="leftLinks">

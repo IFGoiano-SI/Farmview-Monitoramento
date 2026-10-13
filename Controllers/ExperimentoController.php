@@ -128,7 +128,7 @@ class ExperimentoController extends RenderView
 
         //     return $this->loadView('home/index', $data);
         // }
-        
+
         $pasta = __DIR__ . '/../Public/templates/Images/';
         $nomearquivo = uniqid() . "-" . basename($arquivo['name']);
         $caminhoFinal = $pasta . $nomearquivo; //String para o banco de dados
@@ -138,6 +138,8 @@ class ExperimentoController extends RenderView
                 'texto' => 'Erro ao fazer o upload da imagem',
                 'color' => 'danger',
             ];
+
+
             return $this->loadView('home/index', $data);
         }
 
@@ -511,20 +513,24 @@ class ExperimentoController extends RenderView
 
         if (strtotime($valuesEditarExperimentos['experimentos_inicio']) < strtotime($dataLimite->format('Y-m-d'))) {
             $_SESSION['msg'] = ['texto' => "A data de início não pode ser anterior a 10 dias atrás.", 'color' => 'danger'];
-            return $this->editarExperimentosAtivo($experimentoAntigo->experimentos_id);
+            $this->redirect(base_url('gravacao/index'));
         }
 
 
 
         if (strtotime($valuesEditarExperimentos['experimentos_inicio']) > strtotime($dataLimitePosterior->format('Y-m-d'))) {
             $_SESSION['msg'] = ['texto' => "A data de início não pode ser maior que 10 dias. ", 'color' => 'danger'];
-            return $this->editarExperimentosAtivo($experimentoAntigo->experimentos_id);
+            $this->redirect(
+                base_url('experimento/editar/' . $experimentoAntigo->experimentos_id)
+            );
         }
 
 
         if (strtotime($valuesEditarExperimentos['experimentos_final']) < $dataHoje) {
             $_SESSION['msg'] = ['texto' => "A data final do experimento não pode ser inferior a data atual.", 'color' => 'danger'];
-            return $this->editarExperimentosAtivo($experimentoAntigo->experimentos_id);
+            $this->redirect(
+                base_url('experimento/editar/' . $experimentoAntigo->experimentos_id)
+            );
         }
 
 
@@ -536,7 +542,9 @@ class ExperimentoController extends RenderView
                 'color' => 'danger',
             ];
 
-            return $this->editarExperimentosAtivo($experimentoAntigo->experimentos_id);
+            $this->redirect(
+                base_url('experimento/editar/' . $experimentoAntigo->experimentos_id)
+            );
         }
 
         if (strlen(trim($valuesEditarExperimentos['experimentos_titulo'])) < 5) {
@@ -545,7 +553,9 @@ class ExperimentoController extends RenderView
                 'color' => 'danger'
             ];
 
-            return $this->editarExperimentosAtivo($experimentoAntigo->experimentos_id);
+            $this->redirect(
+                base_url('experimento/editar/' . $experimentoAntigo->experimentos_id)
+            );
         }
 
 
@@ -555,7 +565,9 @@ class ExperimentoController extends RenderView
                 'color' => 'danger'
             ];
 
-            return $this->editarExperimentosAtivo($experimentoAntigo->experimentos_id);
+            $this->redirect(
+                base_url('experimento/editar/' . $experimentoAntigo->experimentos_id)
+            );
         }
 
 
@@ -565,7 +577,9 @@ class ExperimentoController extends RenderView
                 'color' => 'danger'
             ];
 
-            return $this->editarExperimentosAtivo($experimentoAntigo->experimentos_id);
+            $this->redirect(
+                base_url('experimento/editar/' . $experimentoAntigo->experimentos_id)
+            );
         }
 
 
@@ -574,7 +588,9 @@ class ExperimentoController extends RenderView
             'color' => 'success',
         ];
 
-        return $this->editarExperimentosAtivo($experimentoAntigo->experimentos_id);
+        $this->redirect(
+            base_url('experimento/editar/' . $experimentoAntigo->experimentos_id)
+        );
     }
 
     public function excluirExperimento($experimentoID)
@@ -592,7 +608,9 @@ class ExperimentoController extends RenderView
                 'color' => 'danger',
             ];
 
-            return $this->editarExperimentosAtivo($experimentoID);
+            $this->redirect(
+                base_url('experimento/editar/' . $experimentoID)
+            );
         }
 
         $_SESSION['msg'] = [

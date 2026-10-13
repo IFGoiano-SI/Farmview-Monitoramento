@@ -75,7 +75,7 @@
 
             <div class="leftScreenTop">
                 <div class="logo">
-                    <img src="<?= base_url('Public/templates/ImageSistema/LogoPreta.png') ?>" alt="Logo CEBIO">
+                    <a href="<?= base_url('home/tela') ?>"><img src="<?= base_url('Public/templates/ImageSistema/LogoPreta.png') ?>" alt="Logo CEBIO"></a>
                 </div>
 
                 <div class="leftLinks">
@@ -115,21 +115,11 @@
                 <div class="navBar">
 
                     <div class="navName">
-                        <h4><?= esc($nome) ?></h4>
-
-                        <?php if ($escolaridade == "Ensino Médio"): ?>
-                            <span class="badge-medio">Ensino Médio</span>
-
-                        <?php elseif ($escolaridade == "Graduação"): ?>
-                            <span class="badge-grad">Graduação</span>
-
-                        <?php elseif ($escolaridade == "Mestrado"): ?>
-                            <span class="badge-mestrado">Mestrado</span>
-
-                        <?php elseif ($escolaridade == "Doutorado"): ?>
-                            <span class="badge-doutorado">Doutorado</span>
-
-                        <?php endif; ?>
+                        <div class="navName">
+                            <h4><?= esc($nome) ?></h4>
+                            <p><?= esc($escolaridade) ?></p>
+                        </div>
+                      
                     </div>
 
                     <div class="navLogout">

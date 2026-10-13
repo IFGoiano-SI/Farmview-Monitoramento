@@ -94,16 +94,16 @@ class UsuarioController extends RenderView
         }
 
         // Validação para inserção de imagem no tamanho permitido
-        if (!$this->usuario->tamanhoImagem($arquivo)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Erro! Tamanho de imagem menor que 300x300. Selecione uma imagem maior!',
-                'color' => 'danger',
-            ];
+        // if (!$this->usuario->tamanhoImagem($arquivo)) {
+        //     $_SESSION['msg'] = [
+        //         'texto' => 'Erro! Tamanho de imagem menor que 300x300. Selecione uma imagem maior!',
+        //         'color' => 'danger',
+        //     ];
 
 
 
-            return $this->loadView('login/cadastro', $data);
-        }
+        //     return $this->loadView('login/cadastro', $data);
+        // }
         $pasta = __DIR__ . '/../Public/uploadImages/';
         $nomearquivo = uniqid() . "-" . basename($arquivo['name']);
         $caminhoFinal = $pasta . $nomearquivo; //String para o banco de dados
@@ -113,6 +113,8 @@ class UsuarioController extends RenderView
                 'texto' => 'Erro ao fazer o upload da imagem',
                 'color' => 'danger',
             ];
+
+            
             return $this->loadView('login/cadastro', $data);
         }
 
