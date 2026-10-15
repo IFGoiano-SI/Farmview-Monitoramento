@@ -14,6 +14,28 @@ A Farmview é um projeto acadêmico desenvolvido para realizar o monitoramento d
 Uma possível solução seria realizar o isolamento físico do Raspberry Pi 4 por meio de uma conexão Ethernet dedicada, separando sua comunicação da rede principal, desde que as configurações de rede impedissem acessos externos não autorizados. Entretanto, considerando a necessidade de aplicar conceitos de Segurança da Informação, surgiu a proposta de simular uma infraestrutura de rede segmentada utilizando Docker Compose e implementar regras de firewall com `iptables`, visando restringir o acesso direto aos serviços internos, permitir apenas as comunicações necessárias e registrar tentativas de acesso não autorizado.
 
 
+# Dockerfile
+
+FROM php:8.2-apache
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends unzip libzip-dev libpng-dev \
+    && docker-php-ext-install pdo_mysql zip gd \
+    && a2enmod rewrite \
+    && cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
+    && rm -rf /var/lib/apt/lists/*
+    
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY docker/vhost.conf /etc/apache2/sites-available/000-default.conf
+
+WORKDIR /var/www/html
+COPY . /var/www/html
+
+RUN chown -R www-data:www-data /var/www/html
+
+EXPOSE 80
+
+
 # Criação dos containers
 
 O ambiente de simulação do FarmView foi estruturado utilizando Docker Compose, contendo sete containers distribuídos em redes distintas para representar a aplicação web, o banco de dados, o firewall, o cliente e o servidor HTTP simulado do Raspberry Pi 4.
