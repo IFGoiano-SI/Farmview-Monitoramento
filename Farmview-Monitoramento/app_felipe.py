@@ -225,6 +225,14 @@ def atualizar_sensores():
 
             for i, ch in enumerate(channels):
                 v, p = ler_sensor_medio(ch, i)
+
+                print(
+                    f"Sensor {i + 1}: "
+                    f"{v:.4f} V -> {p:.2f}% | "
+                    f"Calibração: {CALIBRACAO_SENSORES[i]}",
+                    flush=True
+                )
+
                 v = round(v, 4)
                 p = round(p, 2)
                 vs.append(v)
