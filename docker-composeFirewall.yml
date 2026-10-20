@@ -42,7 +42,7 @@ services:
       DB_PASS: root
 
       # Definição das portas e ip de comunicação com o raspberry
-      RASPBERRY_PI: "192.168.1.18"
+      RASPBERRY_PI: "farmview.local"
       RASPBERRY_PORT: "5000"
     # ports:
     #   - "8080:80"
