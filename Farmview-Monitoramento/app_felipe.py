@@ -34,7 +34,12 @@ PINOS = {
     4: PIN_4,
 }
 
-V_MIN, V_MAX = 0.30, 2.50
+CALIBRACAO_SENSORES = [
+    {"seco": 0.30, "molhado": 2.50},  # Sensor 1
+    {"seco": 0.30, "molhado": 2.50},  # Sensor 2
+    {"seco": 0.30, "molhado": 2.50},  # Sensor 3
+    {"seco": 0.30, "molhado": 2.50},  # Sensor 4
+]
 
 lock = threading.Lock()
 gpio_lock = threading.Lock()
@@ -180,17 +185,32 @@ except Exception as exc:
     ) from exc
 
 
-def v_to_pct(v):
-    return round(max(0, min(100, (v - V_MIN) / (V_MAX - V_MIN) * 100)), 2)
+def v_to_pct(v, indice):
+    calibracao = CALIBRACAO_SENSORES[indice]
+    seco = calibracao["seco"]
+    molhado = calibracao["molhado"]
+
+    if seco == molhado:
+        raise ValueError(
+            f"Calibração inválida no sensor {indice + 1}: "
+            "seco e molhado não podem ser iguais."
+        )
+
+    percentual = (v - seco) / (molhado - seco) * 100
+
+    return round(max(0, min(100, percentual)), 2)
 
 
-def ler_sensor_medio(ch, n=5, delay=0.06):
+def ler_sensor_medio(ch, indice, n=5, delay=0.06):
     vals = []
+
     for _ in range(n):
         vals.append(ch.voltage)
         time.sleep(delay)
+
     v = sum(vals) / len(vals)
-    return v, v_to_pct(v)
+
+    return v, v_to_pct(v, indice)
 
 
 def atualizar_sensores():
@@ -204,7 +224,7 @@ def atualizar_sensores():
             gravar_leitura = (agora - ultimo_registro_sensor) >= SENSOR_SAVE_INTERVAL
 
             for i, ch in enumerate(channels):
-                v, p = ler_sensor_medio(ch)
+                v, p = ler_sensor_medio(ch, i)
                 v = round(v, 4)
                 p = round(p, 2)
                 vs.append(v)

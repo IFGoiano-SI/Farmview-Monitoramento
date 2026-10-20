@@ -38,7 +38,7 @@
                         <input type="text"
                             autocomplete="off"
                             name="usuarios_nome"
-                            class="input"
+                            class="form-control"
                             id="usuarios_nome"
                             required
                             placeholder="Informe seu nome completo"
@@ -48,7 +48,7 @@
                     <div class="campos mb-3">
                         <label for="usuarios_escolaridade">Nível de escolaridade</label>
                         <select name="usuarios_escolaridade"
-                            class="select"
+                            class="form-control"
                             id="usuarios_escolaridade"
                             required>
                             <option value="" selected disabled>Selecione</option>
@@ -63,7 +63,7 @@
                         <label for="usuarios_email">Email</label>
                         <input type="email"
                             name="usuarios_email"
-                            class="input"
+                            class="form-control"
                             id="usuarios_email"
                             required
                             placeholder="Informe seu email"
@@ -76,7 +76,7 @@
                         <div class="campo-senha">
                             <input type="password"
                                 name="usuarios_senha"
-                                class="input"
+                                class="form-control"
                                 id="senha"
                                 required
                                 placeholder="Informe sua senha">

@@ -102,7 +102,7 @@
 
             <div class="leftScreenTop">
                 <div class="logo">
-                   <a href="<?= base_url('home/tela') ?>"><img src="<?= base_url('Public/templates/ImageSistema/LogoPreta.png') ?>" alt="Logo CEBIO"></a>
+                    <a href="<?= base_url('home/tela') ?>"><img src="<?= base_url('Public/templates/ImageSistema/LogoPreta.png') ?>" alt="Logo CEBIO"></a>
                 </div>
 
                 <div class="leftLinks">
@@ -240,8 +240,9 @@
                                 <option>Últimas 6h</option>
                             </select>
                         </div>
-
+                        
                         <div class="corpoGrafico">
+                            Valor indisponível  
                             <div class="grafico">
                                 <canvas id="graficoCultivo"></canvas>
                             </div>

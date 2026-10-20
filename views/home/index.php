@@ -75,7 +75,7 @@
                 <div class="navBar">
 
                     <div class="navName">
-                        <h4><?= esc($nome) ?></h4>
+                        <h4>Olá, <?= esc($nome) ?>!</h4>
                         <p><?= esc($escolaridade) ?></p>
                     </div>
 

@@ -510,14 +510,16 @@ class ExperimentoController extends RenderView
         $dataHoje = strtotime(date('d/m/Y'));
 
 
-
+            // Validação de 10 dias antes do dia atual.
+            // O inicio do experimento nao pode ser menor que 10 dias que hoje
         if (strtotime($valuesEditarExperimentos['experimentos_inicio']) < strtotime($dataLimite->format('Y-m-d'))) {
             $_SESSION['msg'] = ['texto' => "A data de início não pode ser anterior a 10 dias atrás.", 'color' => 'danger'];
             $this->redirect(base_url('gravacao/index'));
         }
 
 
-
+            // Validação de 10 dias depois do dia atual.
+            // O inicio do experimento nao pode ser maior que 10 dias que hoje
         if (strtotime($valuesEditarExperimentos['experimentos_inicio']) > strtotime($dataLimitePosterior->format('Y-m-d'))) {
             $_SESSION['msg'] = ['texto' => "A data de início não pode ser maior que 10 dias. ", 'color' => 'danger'];
             $this->redirect(
@@ -525,7 +527,7 @@ class ExperimentoController extends RenderView
             );
         }
 
-
+            // data do experimento final do experimento nao pode ser menor que hoje
         if (strtotime($valuesEditarExperimentos['experimentos_final']) < $dataHoje) {
             $_SESSION['msg'] = ['texto' => "A data final do experimento não pode ser inferior a data atual.", 'color' => 'danger'];
             $this->redirect(
@@ -535,7 +537,7 @@ class ExperimentoController extends RenderView
 
 
 
-
+        // Data final nao pode ser menor que a data de inicio
         if (strtotime($valuesEditarExperimentos['experimentos_final']) < strtotime($valuesEditarExperimentos['experimentos_inicio'])) {
             $_SESSION['msg'] = [
                 'texto' => "A data final do experimento não pode ser menor que a inicial",
@@ -547,6 +549,8 @@ class ExperimentoController extends RenderView
             );
         }
 
+
+        //titulo nao pode ter menos que 5
         if (strlen(trim($valuesEditarExperimentos['experimentos_titulo'])) < 5) {
             $_SESSION['msg'] = [
                 'texto' => 'O título deve possuir pelo menos 5 caracteres.',
@@ -557,6 +561,19 @@ class ExperimentoController extends RenderView
                 base_url('experimento/editar/' . $experimentoAntigo->experimentos_id)
             );
         }
+
+        // Validação de limites de caracteres
+         if (strlen(trim($valuesEditarExperimentos['experimentos_titulo'])) > 80) {
+            $_SESSION['msg'] = [
+                'texto' => 'O título deve possuir menos de 80 caracteres.',
+                'color' => 'danger'
+            ];
+
+            $this->redirect(
+                base_url('experimento/editar/' . $experimentoAntigo->experimentos_id)
+            );
+        }
+
 
 
         if (strlen(trim($valuesEditarExperimentos['experimentos_sala'])) < 5) {
