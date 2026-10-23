@@ -90,8 +90,10 @@ services:
 
     networks:
       - database
-    # ports:
-    #   - "8081:80"
+      - web
+
+    ports:
+      - "8081:80"
 
 
 

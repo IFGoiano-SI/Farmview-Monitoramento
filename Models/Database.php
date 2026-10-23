@@ -213,4 +213,42 @@ class Database
 
         return $stmt->fetch(PDO::FETCH_OBJ);
     }
+
+
+    public function selectQuantidadeExperimentos()
+    {
+        $stmt = $this->conection->prepare("SELECT COUNT(*) FROM experimentos");
+
+        $stmt->execute();
+
+        return $stmt->fetch(PDO::FETCH_COLUMN);
+    }
+
+
+    /***
+     * SELECT
+    participantes_usuarios_id AS usuario_id,
+    COUNT(DISTINCT participantes_experimentos_id) AS total_experimentos
+    FROM participantes
+    GROUP BY participantes_usuarios_id
+    ORDER BY total_experimentos DESC
+    LIMIT 1;
+     * 
+     * 
+     */
+
+
+    public function mostrarMaiorQuantidadeExperimentoUsuario() {
+
+    $stmt = $this->conection->prepare("SELECT COUNT(DISTINCT participantes_experimentos_id) AS total_experimentos, usuarios.usuarios_nome as nome, usuarios.usuarios_imagem as imagem FROM participantes INNER JOIN usuarios  on usuarios_id = participantes.participantes_usuarios_id GROUP BY participantes.participantes_usuarios_id ORDER BY total_experimentos DESC LIMIT 1");
+        $stmt->execute();
+
+        return $stmt->fetch(PDO::FETCH_OBJ);
+    }
+
+
+
+
+    
+
 }

@@ -44,8 +44,8 @@ services:
       # Definição das portas e ip de comunicação com o raspberry
       RASPBERRY_PI: "farmview.local"
       RASPBERRY_PORT: "5000"
-    # ports:
-    #   - "8080:80"
+    ports:
+      - "8080:80"
     volumes:
       # Persiste as imagens de perfil enviadas pelos usuários
       - .:/var/www/html
@@ -92,8 +92,9 @@ services:
 
     networks:
       - database
-    # ports:
-    #   - "8081:80"
+    
+    ports:
+      - "8081:80"
 
 
   firewall:

@@ -60,6 +60,10 @@ class LoginController extends RenderView
     {
         $post = $_POST;
 
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            die('Autenticar foi chamado sem POST. URL: ' . $_SERVER['REQUEST_URI']);
+        }
+
         if (!isset($post['usuarios_email']) || !isset($post['usuarios_senha'])) {
             $_SESSION['msg'] = [
                 'texto' => 'Preencha os campos de login!',
@@ -76,6 +80,8 @@ class LoginController extends RenderView
 
         $usuario = $this->usuarios->select(null, $where)->fetchObject();
 
+    
+
         if (password_verify($senha, $usuario->usuarios_senha)) {
             $_SESSION['usuarios_logado'] = $usuario;
 
@@ -87,7 +93,7 @@ class LoginController extends RenderView
                         'texto' => "Login realizado com sucesso! - Seja bem vindo <strong>" . $_SESSION['usuarios_logado']->usuarios_nome . "</strong>",
                         'color' => 'success',
                     ];
-                    $this->redirect(base_url('adm/home'));
+                    $this->redirect(base_url('adm/index'));
                 } else if ($usuario->usuarios_nivel == 1) {
                     $_SESSION['usuarios_logado'] = $usuario;
 

@@ -7,6 +7,7 @@ $routes = [
     '/usuario/cadastrar' => ['UsuarioController', 'cadastrar'], // Rota que processa o formulário
     '/login' => ['LoginController', 'index'],
     '/login/autenticar' => ['LoginController', 'autenticar'],
+    '/adm/index' => ['AdminController', 'index'],
 
     '/experimento/cadastrar' => ['ExperimentoController', 'cadastrar'],
     '/experimento' => ['ExperimentoController', 'index'],
