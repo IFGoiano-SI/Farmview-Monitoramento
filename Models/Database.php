@@ -258,6 +258,34 @@ class Database
 
     }
 
+    // Verificar quantos experimentos tem o usuario
+    /**
+     * @use em adm controller
+     * @param id de usuariop
+     */
+    public function verificarExperimentosAtivo($id){
+
+        $stmt = $this->conection->prepare("SELECT
+                    u.usuarios_id,
+                    u.usuarios_nome,
+                    COUNT(DISTINCT e.experimentos_id) AS total_experimentos_ativos
+                FROM participantes AS p
+                INNER JOIN usuarios AS u
+                    ON u.usuarios_id = p.participantes_usuarios_id
+                INNER JOIN experimentos AS e
+                    ON e.experimentos_id = p.participantes_experimentos_id
+                WHERE e.experimentos_status = 'Ativo' and u.usuarios_id = '$id'
+                GROUP BY u.usuarios_id, u.usuarios_nome
+                ORDER BY total_experimentos_ativos DESC;");
+
+        $stmt->execute();
+
+        return $stmt->fetch(PDO::FETCH_COLUMN);
+
+
+
+    }
+
 
 
 

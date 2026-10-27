@@ -62,9 +62,53 @@ class AdminController extends RenderView
 
         $where = "e.experimentos_id = " . (int) $experimentos_id;
 
-        $data['infoUser'] = $this->moreUser($where);
+        $data['infoUser'] = $this->moreUser($where)[0] ?? null;
 
         return $this->loadView('adm/infoUser', $data);
+    }
+
+
+    public function ativarExperimentos()
+    {
+
+        $usuario = $_POST['usuarios_id'];
+        $experimento = (int) $_POST['experimentos_id'];
+
+        $idCriptografado = rtrim(base64_encode((string) $experimento), '=');
+
+        $validar = $this->conexao->verificarExperimentosAtivo($usuario);
+
+        if ($validar >= 1) {
+            $_SESSION['msg'] = [
+                'texto' => 'O usuário ja possui um experimento ativo!',
+                'color' => 'danger',
+            ];
+
+            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
+        }
+
+        $join = "usuarios as u on u.usuarios_id = participantes_usuarios_id INNER JOIN experimentos as e on e.experimentos_id = participantes_experimentos_id";
+
+        $where = "e.experimentos_id = " . (int) $experimento;
+        $values = "e.experimentos_status = 'Ativo'";
+
+        if (!$this->conexaoMoreUser->UpdateExperimentos($join, $where, $values)) {
+
+            $_SESSION['msg'] = [
+                'texto' => 'Erro ao ativar o experimento!',
+                'color' => 'danger',
+            ];
+
+            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
+        }
+
+
+        $_SESSION['msg'] = [
+            'texto' => 'Experimento ativado com sucesso!',
+            'color' => 'success',
+        ];
+
+        $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
     }
 
 

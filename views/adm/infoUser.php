@@ -193,19 +193,38 @@
             <div class="titleBack mt-3" style="padding-left: 30px;">
                 <h4><a href="<?= base_url('adm/index') ?>"><i class="bi bi-arrow-left" style="color: black"></i></a> &nbsp;Mais informações</h4>
             </div>
-            
-            <?php var_dump($infoUser)?>
-            <div class="cardInfo">
-                <div class="card" style="width: 18rem;">
+
+            <div class="cardInfo" style="padding-left: 30px; margin-top:40px;">
+                <div class="card" style="width: 18rem; ">
                     <img id="imagemExperimentos" src="<?= base_url($infoUser->experimentos_imagem) ?>" class="card-img-top" alt="...">
 
                     <div class="card-body">
                         <h5 class="card-title"><strong><?= $infoUser->experimentos_titulo ?></strong></h5>
                         <p class="card-text text-small"> <strong>Experimento de: </strong> <?= $infoUser->usuarios_nome ?></p>
-                        
-                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#meuModal<?= $experimentoAtivos->experimentos_id ?>">
-                            Ver mais <i class="bi bi-plus"></i>
-                        </button>
+
+                        <div class="butaoCard" style="display: flex; gap: 10px">
+                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#meuModal<?= $experimentoAtivos->experimentos_id ?>">
+                                Ver mais <i class="bi bi-plus"></i>
+                            </button>
+
+                            <?php if ($infoUser->experimentos_status != 'Ativo'): ?>
+
+                                <form action="<?= base_url('adm/ativarExperimentos') ?>" method="post">
+
+                                    <input type="hidden" name="usuarios_id" value="<?= (int) $infoUser->usuario_id ?>">
+                                    <input type="hidden" name="experimentos_id" value="<?= $infoUser->experimentos_id ?>">
+
+                                    <button type="submit" class="btn btn-warning">Ativar</button>
+
+
+                                </form>
+
+                            <?php endif; ?>
+
+                        </div>
+
+
+
                     </div>
                 </div>
             </div>
