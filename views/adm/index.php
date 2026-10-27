@@ -72,15 +72,13 @@
             align-items: center;
             justify-content: center;
             padding-top: 15px;
-            
+
         }
 
 
         .totInfo p {
             font-size: 13pt;
         }
-        
-
     </style>
 </head>
 
@@ -221,21 +219,119 @@
 
                 <div class="groupInfo">
                     <div class="infoTitle">
-                        <h5>Total de experimentos: </h5>
-                        <p><strong></strong></p>
+                        <h5>Total usuários: </h5>
+                        <p><strong>Total cadastrado <?= $totalUsuarios ?></strong></p>
 
                     </div>
 
-                    <div class="infoQuant">
-                        <img src="" alt="">
-                        <p>NOme</p>
-                        <p>quantidade</p>
-                    </div>
+
                 </div>
 
             </div>
 
+             <?php
+            $limite = 5;
+            $totalRegistros = count($user);
+            $totalPaginas = max(1, (int) ceil($totalRegistros / $limite));
 
+            $paginaAtual = max(1, (int) ($_GET['pagina'] ?? 1));
+            $paginaAtual = min($paginaAtual, $totalPaginas);
+
+            $offset = ($paginaAtual - 1) * $limite;
+
+            $experimentosPaginados = array_slice($user, $offset, $limite);
+            ?>
+
+            <div class="listTable">
+                <h4 class="mt-5" style="margin-left: 20px;">Lista de experimentos</h4>
+
+                <div class="tabelaVideos mt-5" style="width: 80%; margin: 0 auto;">
+                    <table class="table table-striped ">
+                        <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">Experimento</th>
+                                <th scope="col">Usuário</th>
+                                <th scope="col">Data de ínico</th>
+                                <th scope="col">Sala</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Detalhar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($experimentosPaginados as $user): ?>
+                                <tr>
+                                    <th scope="row"> #0<?= esc($user->experimentos_id) ?></th>
+                                    <td><?= esc(mb_strimwidth($user->experimentos_titulo, 0, '50', '...')) ?></td>
+                                    <td><?= esc($user->usuarios_nome) ?></td>
+                                    <td><?= date('d-m-Y', strtotime($user->experimentos_inicio)) ?></td>
+                                    <td><?= esc($user->experimentos_sala) ?></td>
+                                    <td style="color: <?= $user->experimentos_status == 'Ativo' ? 'green' : 'red' ?>;">
+                                        <?= htmlspecialchars($user->experimentos_status) ?>
+                                    </td>
+                                    
+                                    <form action="<?= base_url('adm/infoUser/'. rtrim(base64_encode((string) $user->experimentos_id), '=')) ?>" method="get">
+                                        <td><button type="submit" class="btn btn-outline-primary">Ver mais</button></td>
+
+                                    </form>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+
+
+            </div>
+
+            <!-- Paginação -->
+
+            <?php if ($totalPaginas > 1): ?>
+                <nav aria-label="Paginação dos experimentos">
+                    <ul class="pagination justify-content-center mt-5">
+
+                        <!-- Anterior -->
+                        <li class="page-item <?= $paginaAtual === 1 ? 'disabled' : '' ?>">
+                            <?php if ($paginaAtual > 1): ?>
+                                <a class="page-link" href="?pagina=<?= $paginaAtual - 1 ?>">
+                                    Anterior
+                                </a>
+                            <?php else: ?>
+                                <span class="page-link">Anterior</span>
+                            <?php endif; ?>
+                        </li>
+
+                        <!-- Números das páginas -->
+                        <?php for ($i = 1; $i <= $totalPaginas; $i++): ?>
+                            <li class="page-item <?= $i === $paginaAtual ? 'active' : '' ?>">
+
+                                <?php if ($i === $paginaAtual): ?>
+                                    <span class="page-link" aria-current="page">
+                                        <?= $i ?>
+                                    </span>
+                                <?php else: ?>
+                                    <a class="page-link" href="?pagina=<?= $i ?>">
+                                        <?= $i ?>
+                                    </a>
+                                <?php endif; ?>
+
+                            </li>
+                        <?php endfor; ?>
+
+                        <!-- Próxima -->
+                        <li class="page-item <?= $paginaAtual === $totalPaginas ? 'disabled' : '' ?>">
+                            <?php if ($paginaAtual < $totalPaginas): ?>
+                                <a class="page-link" href="?pagina=<?= $paginaAtual + 1 ?>">
+                                    Próxima
+                                </a>
+                            <?php else: ?>
+                                <span class="page-link">Próxima</span>
+                            <?php endif; ?>
+                        </li>
+
+                    </ul>
+                </nav>
+            <?php endif; ?>
 
         </div>
 

@@ -247,6 +247,18 @@ class Database
     }
 
 
+    public function totalQuantidadeUsuarios() {
+
+        $stmt = $this->conection->prepare("SELECT COUNT(*) from usuarios");
+
+        $stmt->execute();
+
+        return $stmt->fetch(PDO::FETCH_COLUMN);
+
+
+    }
+
+
 
 
     

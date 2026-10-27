@@ -39,6 +39,7 @@ $routes = [
     '/home/parargravacao'             => ['HomeController', 'pararGravacao'],
     '/gravacao/deletarUnique'         => ['GravacaoController', 'deletarGravacao'],
     '/gravacao/deletarAll'            => ['GravacaoController', 'deletarTodasGravacao'],
+    '/adm/infoUser/:id'               => ['AdminController', 'infoUser'],
 
 
 
