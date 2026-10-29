@@ -238,24 +238,24 @@ class Database
      */
 
 
-    public function mostrarMaiorQuantidadeExperimentoUsuario() {
+    public function mostrarMaiorQuantidadeExperimentoUsuario()
+    {
 
-    $stmt = $this->conection->prepare("SELECT COUNT(DISTINCT participantes_experimentos_id) AS total_experimentos, usuarios.usuarios_nome as nome, usuarios.usuarios_imagem as imagem FROM participantes INNER JOIN usuarios  on usuarios_id = participantes.participantes_usuarios_id GROUP BY participantes.participantes_usuarios_id ORDER BY total_experimentos DESC LIMIT 1");
+        $stmt = $this->conection->prepare("SELECT COUNT(DISTINCT participantes_experimentos_id) AS total_experimentos, usuarios.usuarios_nome as nome, usuarios.usuarios_imagem as imagem FROM participantes INNER JOIN usuarios  on usuarios_id = participantes.participantes_usuarios_id GROUP BY participantes.participantes_usuarios_id ORDER BY total_experimentos DESC LIMIT 1");
         $stmt->execute();
 
         return $stmt->fetch(PDO::FETCH_OBJ);
     }
 
 
-    public function totalQuantidadeUsuarios() {
+    public function totalQuantidadeUsuarios()
+    {
 
         $stmt = $this->conection->prepare("SELECT COUNT(*) from usuarios");
 
         $stmt->execute();
 
         return $stmt->fetch(PDO::FETCH_COLUMN);
-
-
     }
 
     // Verificar quantos experimentos tem o usuario
@@ -263,7 +263,8 @@ class Database
      * @use em adm controller
      * @param id de usuariop
      */
-    public function verificarExperimentosAtivo($id){
+    public function verificarExperimentosAtivo($id)
+    {
 
         $stmt = $this->conection->prepare("SELECT
                     u.usuarios_id,
@@ -281,14 +282,33 @@ class Database
         $stmt->execute();
 
         return $stmt->fetch(PDO::FETCH_COLUMN);
-
-
-
     }
 
 
+    public function UpdateExperimentosADM($join, $where, $values)
+    {
+        if (empty($values) || empty($where)) {
+            return false;
+        }
+
+        $join = !empty($join) ? 'INNER JOIN ' . $join : '';
+
+        $fields = array_keys($values);
+
+        $set = implode(' = ?, ', $fields) . ' = ?';
+
+        $query = "UPDATE {$this->tabela}
+              {$join}
+              SET {$set}
+              WHERE {$where}";
 
 
-    
+        // echo '<pre>';
+        // var_dump($query);
+        // var_dump(array_values($values));
+        // echo '</pre>';
+        // exit;
 
+        return $this->execute($query, array_values($values));
+    }
 }

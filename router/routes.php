@@ -41,6 +41,7 @@ $routes = [
     '/gravacao/deletarAll'            => ['GravacaoController', 'deletarTodasGravacao'],
     '/adm/infoUser/:id'               => ['AdminController', 'infoUser'],
     '/adm/ativarExperimentos'         => ['AdminController', 'ativarExperimentos'],
+    '/adm/editarExperimentos'         => ['AdminController', 'editarExperimentos'],
 
 
 

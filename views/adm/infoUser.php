@@ -203,7 +203,7 @@
                         <p class="card-text text-small"> <strong>Experimento de: </strong> <?= $infoUser->usuarios_nome ?></p>
 
                         <div class="butaoCard" style="display: flex; gap: 10px">
-                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#meuModal<?= $experimentoAtivos->experimentos_id ?>">
+                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#listaExperimentos">
                                 Ver mais <i class="bi bi-plus"></i>
                             </button>
 
@@ -225,6 +225,99 @@
 
 
 
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="modal fade modal-xl" id="listaExperimentos" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered modal-xl">
+                    <div class="modal-content">
+
+                        <div class="modal-header">
+                            <h5 class="modal-title mt-3" style="text-align: center !important; font-size: x-large;">Plantio de <strong><?= esc($infoUser->usuarios_nome) ?></strong></h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+
+                        <form action="<?= base_url('adm/editarExperimentos') ?>" method="post" enctype="multipart/form-data">
+                            <div class="modal-body">
+                                <div class="row">
+
+                                    <!-- Id do experimento -->
+                                    <input type="hidden" name="experimentos_id" value="<?= $infoUser->experimentos_id ?>">
+                                    <h5><i class="bi bi-leaf"></i>&nbsp; Experimentos</h5>
+
+                                    <div class="col-md-6 mt-4">
+                                        <label for="experimentos_titulo">Título</label>
+                                        <input type="text" class="form-control" name="experimentos_titulo" id="titulo" placeholder="Experimentos informado pelo usuário" value="<?= esc($infoUser->experimentos_titulo) ?>">
+                                    </div>
+
+
+                                    <div class="col-md-6 mt-4">
+                                        <label for="experimentos_inicio">Início</label>
+                                        <input type="date" class="form-control" name="experimentos_inicio" id="inicio" placeholder="Data informada pelo usuário" value="<?= esc($infoUser->experimentos_inicio) ?>">
+                                    </div>
+
+                                    <div class="col-md-6 mt-4">
+                                        <label for="experimentos_final">Final</label>
+                                        <input type="date" class="form-control" name="experimentos_final" id="final" placeholder="Data informada pelo usuário" value="<?= esc($infoUser->experimentos_final) ?>">
+                                    </div>
+
+                                    <div class="col-md-6 mt-4">
+                                        <label for="experimentos_sala">Sala</label>
+                                        <input type="text" class="form-control" name="experimentos_sala" id="sala" placeholder="Sala informada pelo usuário" value="<?= esc($infoUser->experimentos_sala) ?>">
+                                    </div>
+
+                                    <div class="col-md-6 mt-4">
+                                        <label for="experimentos_status">Status</label>
+                                        <input type="text" class="form-control" name="experimentos_status" id="sala" placeholder="Status do experimento" value="<?= esc($infoUser->experimentos_status) ?>" readonly>
+                                    </div>
+
+
+                                    <div class="col-md-6 mt-4">
+                                        <label for="experimentos_encerrado">Data de encerramento</label>
+                                        <input type="text" class="form-control" name="experimentos_encerrado" id="encerrado" placeholder="Data encerrada" value="<?= date('d/m/Y H:i:s', strtotime($infoUser->experimentos_encerrado)) ?>" readonly>
+                                    </div>
+
+
+                                    <h5 class="mt-5"><i class="bi bi-flask "></i> &nbsp;Bancadas</h5>
+
+                                    <div class="col-md-6 mt-3">
+                                        <label for="bancadas_tipo_plantacao">Plantação</label>
+                                        <input type="text" class="form-control" name="bancadas_tipo_plantacao" id="tipo_plantacao" placeholder="Tipo de plantação" value="<?= esc($infoUser->bancadas_tipo_plantacao) ?>">
+                                    </div>
+
+                                    <div class="col-md-6 mt-4">
+                                        <label for="bancadas_nome_cientifico">Nome científico</label>
+                                        <input type="text" class="form-control" name="bancadas_nome_cientifico" id="nome_cientifico" placeholder="Nome científico" value="<?= esc($infoUser->bancadas_nome_cientifico) ?>">
+                                    </div>
+
+
+                                    <div class="col-md-6 mt-4">
+                                        <label for="bancadas_quantidade">Quantidade</label>
+                                        <input type="number" class="form-control" name="bancadas_quantidade" id="bancadas_quantidade" placeholder="Quantidade" value="<?= esc($infoUser->bancadas_quantidade) ?>">
+                                    </div>
+
+
+                                    <div class="col-md-6 mt-4">
+                                        <label for="bancadas_luzes">Luzes</label>
+                                        <input type="text" class="form-control" name="bancadas_luzes" id="bancadas_luzes" placeholder="Quantidade" value="<?= esc($infoUser->bancadas_luzes) ?>" readonly>
+                                    </div>
+
+
+
+
+                                </div>
+
+
+
+                            </div>
+                            <div class="modal-footer">
+
+                                <button type="submit" class="btn btn-success">Atualizar dados</button>
+                            </div>
+
+                        </form>
                     </div>
                 </div>
             </div>

@@ -639,11 +639,6 @@ class ExperimentoController extends RenderView
     }
 
 
-
-
-
-
-
     // Função que envia para a tela de experimentos - historico
     public function listarExperimentos()
     {

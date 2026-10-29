@@ -58,24 +58,32 @@ class GravacaoController extends RenderView
     {
         $videoDeletado = $_POST['videos_id'];
 
-        $valuesDeletar = [
-            'videos_status' => 'Desativado',
-            'deletado_em' => date('Y-m-d H:i:s'),
-        ];
 
-        $where = "videos_id = '$videoDeletado'";
+        $caminhoVideo = $_POST['path_video'];
 
-        if ($this->gravacao->update($where, $valuesDeletar)) {
-            $_SESSION['msg'] = [
-                'texto' => "Video #0$videoDeletado deletado com sucesso!",
-                'color' => 'success',
-            ];
+        if (file_exists($caminhoVideo)) {
+            if (unlink($caminhoVideo)) {
+                $_SESSION['msg'] = [
+                    'texto' => "Arquivo deletado com sucesso!",
+                    'color' => 'success',
+                ];
+
+                $this->redirect(base_url('gravacao/index'));
+            } else {
+                $_SESSION['msg'] = [
+                    'texto' => "Erro ao deletar video: $videoDeletado!",
+                    'color' => 'danger',
+                ];
+
+                $this->redirect(base_url('gravacao/index'));
+            }
         } else {
             $_SESSION['msg'] = [
-                'texto' => "Erro ao deletar video: $videoDeletado!",
+                'texto' => "Arquivo nao encontrado!",
                 'color' => 'danger',
             ];
         }
+
 
         $this->redirect(base_url('gravacao/index'));
     }

@@ -317,6 +317,9 @@
                                             name="videos_id"
                                             value="<?= esc($video->videos_id) ?>">
 
+
+                                            <input type="hidden" name="path_video" value="<?= esc($video->path_video) ?>">
+
                                         <div class="modal-body text-center">
                                             <h4>Deseja deletar o video <strong>#0<?= $video->videos_id ?></strong> da tabela?</h4>
                                             <p>Ao deletar, você não conseguirá fazer o download dele!</p>
