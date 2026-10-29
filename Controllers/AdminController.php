@@ -73,7 +73,7 @@ class AdminController extends RenderView
     }
 
     // Função para ativar os experimentos finalizados, contendo regras de apenas 1 experimento por pessoa
-    
+
     public function ativarExperimentos()
     {
 
@@ -158,24 +158,6 @@ class AdminController extends RenderView
         ];
 
 
-        // try {
-        //     $resultado = $this->bancadasExperimento
-        //         ->UpdateExperimentosADM($join, $where, $valuesEdit);
-
-        //     var_dump($resultado);
-        //     exit;
-        // } catch (\Throwable $erro) {
-        //     header('Content-Type: text/plain; charset=utf-8');
-
-        //     echo 'Tipo: ' . get_class($erro) . PHP_EOL;
-        //     echo 'Erro: ' . $erro->getMessage() . PHP_EOL;
-        //     echo 'Arquivo: ' . $erro->getFile() . PHP_EOL;
-        //     echo 'Linha: ' . $erro->getLine();
-        //     exit;
-        // }
-
-        // var_dump($valuesEdit);
-        // exit;
 
 
 
@@ -269,14 +251,196 @@ class AdminController extends RenderView
     }
 
 
-    public function listarUsuarios() {
+    public function listarUsuarios()
+    {
 
         $data['usuarios'] = $this->allUsers->queryList();
-
-
         return $this->loadView('adm/usuarios', $data);
+    }
+
+    public function createUser()
+    {
+
+        $usuarios_imagem = 'uploadImages/default.png';
 
 
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(base_url('adm/usuarios'));
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && empty($_FILES)) {
+            $_SESSION['msg'] = [
+                'texto' => 'Arquivo muito grande! Máximo permitido foi excedido.',
+                'color' => 'danger'
+            ];
+
+            $this->redirect(base_url('adm/usuarios'));
+        }
+
+
+        // Verifica se existe valor na varivel
+        if (
+            !isset($_FILES['usuarios_imagem']) ||
+            empty($_FILES['usuarios_imagem']['name']) ||
+            $_FILES['usuarios_imagem']['error'] !== 0
+        ) {
+
+            $_SESSION['msg'] = [
+                'texto' => 'Atenção! Informe uma imagem para o perfil!',
+                'color' => 'warning'
+            ];
+            $this->redirect(base_url('adm/usuarios'));
+        }
+        $arquivo = $_FILES['usuarios_imagem']; //atribui o caminho para variavel
+
+
+        // Validação se a imagem for maior que 2MB
+        if (!$this->conexao->validaImagem($arquivo)) {
+            $_SESSION['msg'] = [
+                'texto' => "Erro! Selecione outra imagem até 2MB",
+                'color' => 'danger',
+            ];
+
+            $this->redirect(base_url('adm/usuarios'));
+        }
+        // Validação para ver se a imagem esta no formato permitido
+        if (!$this->conexao->tipoImagem($arquivo)) {
+            $_SESSION['msg'] = [
+                'texto' => 'Formato da imagem não permitido - Selecione apenas JPEG, JPG ou PNG',
+                'color' => 'danger',
+            ];
+
+
+            $this->redirect(base_url('adm/usuarios'));
+        }
+
+
+        $pasta = __DIR__ . '/../Public/uploadImages/';
+        $nomearquivo = uniqid() . "-" . basename($arquivo['name']);
+        $caminhoFinal = $pasta . $nomearquivo; //String para o banco de dados
+
+        if (!move_uploaded_file($arquivo['tmp_name'], $caminhoFinal)) {
+            $_SESSION['msg'] = [
+                'texto' => 'Erro ao fazer o upload da imagem',
+                'color' => 'danger',
+            ];
+
+
+            $this->redirect(base_url('adm/usuarios'));
+        }
+
+        $usuarios_imagem = 'Public/uploadImages/' . $nomearquivo; //atribue valor para a variavel
+
+
+        $post = $_POST;
+
+        $valuesCreate = [
+            'usuarios_nome' => $post['usuarios_nome'],
+            'usuarios_escolaridade' => $post['usuarios_escolaridade'],
+            'usuarios_email' => $post['usuarios_email'],
+            'usuarios_senha' => password_hash($post['usuarios_senha'], PASSWORD_DEFAULT),
+            'usuarios_imagem' => $usuarios_imagem,
+            'usuarios_ativo' => 1,
+            'usuarios_nivel' => $post['usuarios_nivel'],
+
+        ];
+
+
+        $emailUsuario = $valuesCreate['usuarios_email'];
+
+        $where = "usuarios_email = '$emailUsuario'";
+
+        $usuarioEmail = $this->allUsers->select(null, $where)->fetchObject();
+
+
+        // Se cadastrar sem nome
+        if (empty($valuesCreate['usuarios_nome'])) {
+            $_SESSION['msg'] = [
+                'texto' => 'O campo nome não pode ser vazio!',
+                'color' => 'danger',
+            ];
+
+            $this->redirect(base_url('adm/usuarios'));
+        }
+
+        // Cadastrar nomes menores que 3 caracteres
+        if (strlen($valuesCreate['usuarios_nome']) < 3) {
+            $_SESSION['msg'] = [
+                'texto' => 'O campo nome precisa ter mais de 3 caracteres!',
+                'color' => 'danger',
+            ];
+
+            $this->redirect(base_url('adm/usuarios'));
+        }
+
+
+        // Cadatrar nomes maiores que 40 caracteres
+        if (strlen($valuesCreate['usuarios_nome']) > 40) {
+            $_SESSION['msg'] = [
+                'texto' => 'O campo nome precisa ter menos de 40 caracteres!',
+                'color' => 'danger',
+            ];
+
+            $this->redirect(base_url('adm/usuarios'));
+        }
+
+        // Se a escolaridade vier vazia
+        if (empty($valuesCreate['usuarios_escolaridade'])) {
+            $_SESSION['msg'] = [
+                'texto' => 'Escolha o grau de escolaridade',
+                'color' => 'danger',
+            ];
+
+            $this->redirect(base_url('adm/usuarios'));
+        }
+
+        // Validação do email do usuario
+        if (!filter_var($valuesCreate['usuarios_email'], FILTER_VALIDATE_EMAIL)) {
+            $_SESSION['msg'] = [
+                'texto' => 'Formato de email inválido!',
+                'color' => 'danger',
+            ];
+
+            $this->redirect(base_url('adm/usuarios'));
+        }
+
+        if ($usuarioEmail) {
+            $_SESSION['msg'] = [
+                'texto' => 'Email ja cadastrado!',
+                'color' => 'danger',
+            ];
+
+            $this->redirect(base_url('adm/usuarios'));
+        }
+
+
+        // Validação de senha
+
+        if (strlen($valuesCreate['usuarios_senha']) < 5) {
+            $_SESSION['msg'] = [
+                'texto' => 'Não é permitido criar uma senha com menos de 5 caracteres!',
+                'color' => 'danger',
+            ];
+
+            $this->redirect(base_url('adm/usuarios'));
+        }
+
+        if ($this->allUsers->insert($valuesCreate)) {
+            $_SESSION['msg'] = [
+                'texto' => 'Cadastro realizado com sucesso!',
+                'color' => 'success',
+            ];
+
+
+            $this->redirect(base_url('adm/usuarios'));
+        } else {
+            $_SESSION['msg'] = [
+                'texto' => 'Erro ao realizar o cadastro, tente novamente!',
+                'color' => 'danger',
+            ];
+
+            $this->redirect(base_url('adm/usuarios'));
+        }
     }
 
     // FUnção para listar os experimentos de todos os usuarios, usado no index 

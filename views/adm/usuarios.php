@@ -232,12 +232,12 @@
                                 <div class="modal-body">
                                     <div class="row">
 
-                                        <div class="col-md-6 mt-4">
+                                        <div class="col-md-6 mt-2">
                                             <label for="usuarios_nome">Nome</label>
                                             <input type="text" class="form-control" name="usuarios_nome" id="nome" placeholder="Informe o nome do usuário" required>
                                         </div>
 
-                                        <div class="col-md-6 mt-4">
+                                        <div class="col-md-6 mt-2">
                                             <label for="usuarios_escolaridade">Nível de escolaridade</label>
                                             <select name="usuarios_escolaridade"
                                                 class="form-control"

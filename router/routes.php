@@ -42,6 +42,7 @@ $routes = [
     '/adm/editarExperimentos'         => ['AdminController', 'editarExperimentos'],
     '/adm/listarUsuarios'             => ['AdminController', 'listarUsuarios'],
     '/adm/createUser'                 => ['AdminController', 'createUser'],
+    '/adm/usuarios'                   => ['AdminController', 'listarUsuarios'],
 
 
 
