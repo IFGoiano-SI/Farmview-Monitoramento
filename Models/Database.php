@@ -311,4 +311,17 @@ class Database
 
         return $this->execute($query, array_values($values));
     }
+
+
+    public function queryList()
+    {
+
+        $stmt = $this->conection->prepare("SELECT * FROM {$this->tabela}" );
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_OBJ);
+    }
+
+
+
 }

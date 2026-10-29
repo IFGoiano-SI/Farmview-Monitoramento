@@ -109,7 +109,7 @@
                             </a>
                         </li>
                         <li>
-                            <a class="linksDashboard" href="#">
+                            <a class="linksDashboard" href="<?= base_url('adm/listarUsuarios') ?>">
                                 <i class="bi bi-person-plus-fill"></i> Usuários
                             </a>
                         </li>

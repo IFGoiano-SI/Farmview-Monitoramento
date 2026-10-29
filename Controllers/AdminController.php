@@ -17,6 +17,7 @@ class AdminController extends RenderView
     private $conexao;
     private $conexaoMoreUser;
     private $bancadasExperimento;
+    private $allUsers;
 
 
     public function __construct()
@@ -25,6 +26,7 @@ class AdminController extends RenderView
         $this->conexao = new Conexao();
         $this->conexaoMoreUser = new Conexao('participantes');
         $this->bancadasExperimento = new Conexao('bancadas_experimentos');
+        $this->allUsers = new Conexao('usuarios');
     }
 
     protected function redirect($path, $mensagem = null)
@@ -70,7 +72,8 @@ class AdminController extends RenderView
         return $this->loadView('adm/infoUser', $data);
     }
 
-
+    // Função para ativar os experimentos finalizados, contendo regras de apenas 1 experimento por pessoa
+    
     public function ativarExperimentos()
     {
 
@@ -114,6 +117,8 @@ class AdminController extends RenderView
         $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
     }
 
+
+    // Função para editar experimentos de forma especifica
     public function editarExperimentos()
     {
 
@@ -264,6 +269,17 @@ class AdminController extends RenderView
     }
 
 
+    public function listarUsuarios() {
+
+        $data['usuarios'] = $this->allUsers->queryList();
+
+
+        return $this->loadView('adm/usuarios', $data);
+
+
+    }
+
+    // FUnção para listar os experimentos de todos os usuarios, usado no index 
     private function moreUser($where = null)
     {
 
