@@ -247,7 +247,7 @@
 
                         <div class="col-md-6 mt-4 ">
                             <label for="usuarios_imagem">Foto de perfil</label>
-                            <input type="file" name="usuarios_imagem" id="usuarios_imagem" class="form-control" value="<?= esc(base_url($usuarios->usuarios_imagem)) ?>" accept="image/*">
+                            <input type="file" name="usuarios_imagem" id="usuarios_imagem" class="form-control" accept="image/*">
                         </div>
 
                         <div class="col-md-6 mt-4">
@@ -264,7 +264,7 @@
                                     Ativo
                                 </option>
 
-                                <option value="2"
+                                <option value="0"
                                     <?= $usuarios->ativo === 0 ? 'selected' : '' ?>>
                                     Inativo
                                 </option>
@@ -309,6 +309,8 @@
                             <input type="text" name="usuarios_atualizado_em" id="usuarios_atualizado_em" class="form-control" value=<?= date('d/m/Y', strtotime($usuarios->usuarios_atualizado_em)) ?> readonly>
                         </div>
 
+                        <input type="hidden" name="usuarios_id" value="<?= $usuarios->usuarios_id ?>">
+
 
                         <div class="userBotao mt-3" style="display: flex; gap: 10px; justify-content: flex-end;">
                             <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalDeletarConta">Deletar usuário</button>
@@ -328,7 +330,7 @@
                         </div>
 
                         <div class="modal-body">
-                            <form action="<?= base_url('adm/deletarUsuario' . rtrim(base64_encode((string) $usuarios->usuarios_id), '=')) ?>" method="post">
+                            <form action="<?= base_url('adm/deletarUsuario/' . rtrim(base64_encode((string) $usuarios->usuarios_id), '=')) ?>" method="post">
                                 <h4 class="text-center mt-4 mb-5">Deseja excluír usuário?</h4>
                                 <p class="text-center">
                                     <button type="button" class="btn btn-secondary" style="width: 100px;" data-bs-dismiss="modal">Não</button>

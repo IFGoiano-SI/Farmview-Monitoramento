@@ -313,10 +313,10 @@ class Database
     }
 
 
-    public function queryList()
+    public function queryList($where = null)
     {
 
-        $stmt = $this->conection->prepare("SELECT * FROM {$this->tabela}" );
+        $stmt = $this->conection->prepare("SELECT * FROM {$this->tabela} WHERE = $where" );
         $stmt->execute();
 
         return $stmt->fetchAll(PDO::FETCH_OBJ);

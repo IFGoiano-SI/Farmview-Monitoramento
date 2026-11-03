@@ -2,6 +2,8 @@
 
 namespace Controllers;
 
+
+
 use Exception;
 use Models\Database as Conexao;
 use \PDO;
@@ -459,6 +461,133 @@ class AdminController extends RenderView
         return $this->loadView('adm/userDetails', $data);
     }
 
+    public function editarUsuario()
+    {
+
+        $post = $_POST;
+
+        $usuarioID = $post['usuarios_id'];
+        $idCriptografado = rtrim(base64_encode((string) $usuarioID), '=');
+
+
+        $where = "usuarios_id = " . (int) $usuarioID;
+
+        $usuarioEdit =  $this->allUsers->queryList($where);
+
+
+
+        if (!$usuarioEdit) {
+            $_SESSION['msg'] = [
+                'texto' => 'Usuário não encontrado.',
+                'color' => 'danger',
+            ];
+
+            $this->redirect(base_url('adm/userDetails/' . $idCriptografado));
+        }
+
+
+        $valuesEdit = [
+            'usuarios_nome' => trim($post['usuarios_nome'] ?? $usuarios->usuarios_nome),
+            'usuarios_escolaridade' => $post['usuarios_escolaridade'] ?? $usuarios->usuarios_escolaridade,
+            'usuarios_email' => trim($post['usuarios_email'] ?? $usuarios->usuarios_email),
+            'usuarios_ativo' => $post['usuarios_ativo'] ?? $usuarios->usuarios_ativo,
+            'usuarios_nivel' => $post['usuarios_nivel'] ?? $usuarios->usuarios_nivel,
+            'usuarios_atualizado_em' => date('Y-m-d H:i:s'),
+        ];
+
+
+
+
+
+        $dataLimite = (new DateTime())->modify('-10 days');
+        $dataLimitePosterior = (new DateTime())->modify('+10 days');
+        $dataHoje = strtotime(date('d/m/Y'));
+
+
+        // Validação de 10 dias antes do dia atual.
+        // O inicio do experimento nao pode ser menor que 10 dias que hoje
+        if (strtotime($valuesEdit['experimentos_inicio']) < strtotime($dataLimite->format('Y-m-d'))) {
+            $_SESSION['msg'] = ['texto' => "A data de início não pode ser anterior a 10 dias atrás.", 'color' => 'danger'];
+            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
+        }
+
+
+        // Validação de 10 dias depois do dia atual.
+        // O inicio do experimento nao pode ser maior que 10 dias que hoje
+        if (strtotime($valuesEdit['experimentos_inicio']) > strtotime($dataLimitePosterior->format('Y-m-d'))) {
+            $_SESSION['msg'] = ['texto' => "A data de início não pode ser maior que 10 dias. ", 'color' => 'danger'];
+            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
+        }
+
+        // data do experimento final do experimento nao pode ser menor que hoje
+        if (strtotime($valuesEdit['experimentos_final']) < $dataHoje) {
+            $_SESSION['msg'] = ['texto' => "A data final do experimento não pode ser inferior a data atual.", 'color' => 'danger'];
+            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
+        }
+
+
+
+        // Data final nao pode ser menor que a data de inicio
+        if (strtotime($valuesEdit['experimentos_final']) < strtotime($valuesEdit['experimentos_inicio'])) {
+            $_SESSION['msg'] = [
+                'texto' => "A data final do experimento não pode ser menor que a inicial",
+                'color' => 'danger',
+            ];
+
+            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
+        }
+
+
+        //titulo nao pode ter menos que 5
+        if (strlen(trim($valuesEdit['experimentos_titulo'])) < 5) {
+            $_SESSION['msg'] = [
+                'texto' => 'O título deve possuir pelo menos 5 caracteres.',
+                'color' => 'danger'
+            ];
+
+            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
+        }
+
+        // Validação de limites de caracteres
+        if (strlen(trim($valuesEdit['experimentos_titulo'])) > 80) {
+            $_SESSION['msg'] = [
+                'texto' => 'O título deve possuir menos de 80 caracteres.',
+                'color' => 'danger'
+            ];
+
+            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
+        }
+
+
+
+        if (strlen(trim($valuesEdit['experimentos_sala'])) < 5) {
+            $_SESSION['msg'] = [
+                'texto' => 'É necessário ter ao menos 5 caracteres no campo de sala!',
+                'color' => 'danger'
+            ];
+
+            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
+        }
+
+
+        if (!$this->bancadasExperimento->UpdateExperimentosADM($join, $where, $valuesEdit)) {
+            $_SESSION['msg'] = [
+                'texto' => 'Erro ao editar este experimento',
+                'color' => 'danger'
+            ];
+
+            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
+        }
+
+
+        $_SESSION['msg'] = [
+            'texto' => 'Experimento editado com sucesso!',
+            'color' => 'success',
+        ];
+
+        $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
+    }
+
 
     public function deletarUsuario($id)
     {
@@ -472,30 +601,31 @@ class AdminController extends RenderView
 
         $valuesExcluir = [
             'usuarios_ativo' => 0,
-            'usuarios_deletado_em' => date('Y-m-d H:i:s'),    
+            'usuarios_deletado_em' => date('Y-m-d H:i:s'),
         ];
 
         $where = "usuarios_id ='$usuarios_id'";
 
 
-        if (!$this->usuario->allUsers($where, $valuesExcluir)) {
+        if (!$this->allUsers->update($where, $valuesExcluir)) {
             $_SESSION['msg'] = [
-                'texto' => 'Erro ao excluir o experimento!',
+                'texto' => 'Erro ao excluir este usuário!',
                 'color' => 'danger',
             ];
 
-            $this->redirect(
-                base_url('experimento/editar/' . $experimentoID)
-            );
+            $this->redirect(base_url('adm/detailsUser/' . $id));
         }
 
         $_SESSION['msg'] = [
-            'texto' => 'Experimento excluído com sucesso!',
+            'texto' => 'Usuário excluído com sucesso!',
             'color' => 'success',
         ];
 
-        return $this->home->index();
+        $this->redirect(base_url('adm/usuarios'));
     }
+
+
+
 
 
     // FUnção para listar os experimentos de todos os usuarios, usado no index 
