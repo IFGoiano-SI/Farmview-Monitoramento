@@ -86,8 +86,20 @@ class LoginController extends RenderView
             $_SESSION['usuarios_logado'] = $usuario;
 
             if ($usuario) {
+                
+                if($usuario->usuarios_ativo == 0) {
+                    $_SESSION['msg'] = [
+                        'texto' => "Sua conta foi excluída, certifique com o administrador!",
+                        'color' => 'danger',
+                    ];
 
+                    $this->redirect(base_url('login'));
+
+                }
+                
                 if ($usuario->usuarios_nivel == 2) {
+
+
                     $_SESSION['usuarios_logado'] = $usuario;
                     $_SESSION['msg'] = [
                         'texto' => "Login realizado com sucesso! - Seja bem vindo <strong>" . $_SESSION['usuarios_logado']->usuarios_nome . "</strong>",

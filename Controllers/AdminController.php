@@ -443,6 +443,61 @@ class AdminController extends RenderView
         }
     }
 
+    public function detailsUser($id)
+    {
+        $usuarios_id = base64_decode($id, true);
+
+        if ($usuarios_id === false || !ctype_digit($usuarios_id)) {
+            http_response_code(400);
+            exit('ID inválido');
+        }
+
+        $where = "usuarios_id =" . (int) $usuarios_id;
+
+        $data['usuarios'] = $this->moreUser($where)[0] ?? null;
+
+        return $this->loadView('adm/userDetails', $data);
+    }
+
+
+    public function deletarUsuario($id)
+    {
+
+        $usuarios_id = base64_decode($id, true);
+
+        if ($usuarios_id === false || !ctype_digit($usuarios_id)) {
+            http_response_code(400);
+            exit('ID inválido');
+        }
+
+        $valuesExcluir = [
+            'usuarios_ativo' => 0,
+            'usuarios_deletado_em' => date('Y-m-d H:i:s'),    
+        ];
+
+        $where = "usuarios_id ='$usuarios_id'";
+
+
+        if (!$this->usuario->allUsers($where, $valuesExcluir)) {
+            $_SESSION['msg'] = [
+                'texto' => 'Erro ao excluir o experimento!',
+                'color' => 'danger',
+            ];
+
+            $this->redirect(
+                base_url('experimento/editar/' . $experimentoID)
+            );
+        }
+
+        $_SESSION['msg'] = [
+            'texto' => 'Experimento excluído com sucesso!',
+            'color' => 'success',
+        ];
+
+        return $this->home->index();
+    }
+
+
     // FUnção para listar os experimentos de todos os usuarios, usado no index 
     private function moreUser($where = null)
     {

@@ -98,13 +98,13 @@
 
             <div class="leftScreenTop">
                 <div class="logo">
-                    <a href="<?= base_url('home/tela') ?>"><img src="<?= base_url('Public/templates/ImageSistema/LogoPreta.png') ?>" alt="Logo CEBIO"></a>
+                    <a href="<?= base_url('adm/index') ?>"><img src="<?= base_url('Public/templates/ImageSistema/LogoPreta.png') ?>" alt="Logo CEBIO"></a>
                 </div>
 
                 <div class="leftLinks">
                     <ul>
                         <li>
-                            <a class="linksDashboard" href="#">
+                            <a class="linksDashboard" href="<?= base_url('adm/index') ?>">
                                 <i class="bi bi-house-door-fill"></i> Dashboard
                             </a>
                         </li>
@@ -113,13 +113,6 @@
                                 <i class="bi bi-person-plus-fill"></i> Usuários
                             </a>
                         </li>
-                        <li>
-                            <a class="linksDashboard" href="#">
-                                <i class="bi bi-clipboard2-pulse"></i> Plantios
-                            </a>
-                        </li>
-
-                        <li><a class="linksDashboard" href="#"><i class="bi bi-webcam"></i> Vídeos</a></li>
                     </ul>
                 </div>
             </div>
