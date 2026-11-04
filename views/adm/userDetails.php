@@ -144,9 +144,10 @@
                     </div>
 
                     <div class="navLogout">
-                        <a href="<?= base_url('experimento/editar/' . $usuarioExperimento->experimentos_id) ?>">
+                         <a href="#">
                             <img id="imagePerson" src="<?= base_url($foto) ?>" alt="Foto de perfil">
                         </a>
+
 
 
                         <button type="button" class="btn-logout" data-bs-toggle="modal" data-bs-target="#meuModalSair">
@@ -191,7 +192,7 @@
             <div class="container mt-5" style="background-color: #f0f0f07a; border-radius: 10px; padding: 15px 25px;">
                 <h5 class="mt-3"> Detalhes de: <strong><?= $usuarios->usuarios_nome ?></strong> - ID: #0<?= $usuarios->usuarios_id ?></h5>
 
-                <form action="" method="post" enctype="multipart/form-data">
+                <form action="<?= base_url('adm/editarUsuario') ?>" method="post" enctype="multipart/form-data">
 
                     <div class="row">
                         <div class="col-md-6 mt-5">
@@ -252,20 +253,20 @@
 
                         <div class="col-md-6 mt-4">
                             <label for="usuarios_ativo">Status usuário</label>
-                            <select name="usuarios_escolaridade"
+                            <select name="usuarios_ativo"
                                 class="form-control"
-                                id="usuarios_escolaridade"
+                                id="usuarios_ativo"
                                 required>
 
                                 <option value="" disabled>Selecione</option>
 
                                 <option value="1"
-                                    <?= $usuarios->ativo === 1 ? 'selected' : '' ?>>
+                                    <?= $usuarios->usuarios_ativo === 1 ? 'selected' : '' ?>>
                                     Ativo
                                 </option>
 
                                 <option value="0"
-                                    <?= $usuarios->ativo === 0 ? 'selected' : '' ?>>
+                                    <?= $usuarios->usurios_ativo === 0 ? 'selected' : '' ?>>
                                     Inativo
                                 </option>
                                 </option>
@@ -273,21 +274,21 @@
                         </div>
 
                         <div class="col-md-6 mt-4">
-                            <label for="usuarios_is_admin">Tipo de usuário</label>
-                            <select name="usuarios_is_admin"
+                            <label for="usuarios_nivel">Tipo de usuário</label>
+                            <select name="usuarios_nivel"
                                 class="form-control"
-                                id="usuarios_is_admin"
+                                id="usuarios_nivel"
                                 required>
 
                                 <option value="" disabled>Selecione</option>
 
                                 <option value="1"
-                                    <?= $usuarios->ativo === 1 ? 'selected' : '' ?>>
+                                    <?= $usuarios->usuarios_nivel === 1 ? 'selected' : '' ?>>
                                     Normal
                                 </option>
 
                                 <option value="2"
-                                    <?= $usuarios->ativo === 0 ? 'selected' : '' ?>>
+                                    <?= $usuarios->usuarios_nivel === 0 ? 'selected' : '' ?>>
                                     Administrador
                                 </option>
                                 </option>

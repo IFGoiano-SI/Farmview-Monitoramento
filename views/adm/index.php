@@ -144,7 +144,7 @@
                     </div>
 
                     <div class="navLogout">
-                        <a href="<?= base_url('experimento/editar/' . $usuarioExperimento->experimentos_id) ?>">
+                        <a href="">
                             <img id="imagePerson" src="<?= base_url($foto) ?>" alt="Foto de perfil">
                         </a>
 

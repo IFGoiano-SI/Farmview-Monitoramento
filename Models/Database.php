@@ -303,20 +303,16 @@ class Database
               WHERE {$where}";
 
 
-        // echo '<pre>';
-        // var_dump($query);
-        // var_dump(array_values($values));
-        // echo '</pre>';
-        // exit;
+       
 
         return $this->execute($query, array_values($values));
     }
 
 
-    public function queryList($where = null)
+    public function queryList()
     {
 
-        $stmt = $this->conection->prepare("SELECT * FROM {$this->tabela} WHERE = $where" );
+        $stmt = $this->conection->prepare("SELECT * FROM {$this->tabela}" );
         $stmt->execute();
 
         return $stmt->fetchAll(PDO::FETCH_OBJ);

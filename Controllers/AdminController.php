@@ -15,7 +15,7 @@ class AdminController extends RenderView
 {
 
     private $usuario;
-    private $experimentos;
+
     private $conexao;
     private $conexaoMoreUser;
     private $bancadasExperimento;
@@ -456,7 +456,9 @@ class AdminController extends RenderView
 
         $where = "usuarios_id =" . (int) $usuarios_id;
 
-        $data['usuarios'] = $this->moreUser($where)[0] ?? null;
+        $data['usuarios'] = $this->allUsers
+            ->selectPesquisar(null, $where)
+            ->fetch(PDO::FETCH_OBJ);
 
         return $this->loadView('adm/userDetails', $data);
     }
@@ -472,7 +474,20 @@ class AdminController extends RenderView
 
         $where = "usuarios_id = " . (int) $usuarioID;
 
-        $usuarioEdit =  $this->allUsers->queryList($where);
+        $usuarioEdit =  $this->allUsers->selectPesquisar(null, $where)->fetch(PDO::FETCH_OBJ);
+
+
+        echo '<pre>';
+        echo "Condição da consulta:\n";
+        var_dump($where);
+
+        echo "\nTipo retornado:\n";
+        var_dump(gettype($usuarioEdit));
+
+        echo "\nDados retornados:\n";
+        var_dump($usuarioEdit);
+        echo '</pre>';
+        exit;
 
 
 
@@ -482,110 +497,76 @@ class AdminController extends RenderView
                 'color' => 'danger',
             ];
 
-            $this->redirect(base_url('adm/userDetails/' . $idCriptografado));
+            $this->redirect(base_url('adm/detailsUser/' . $idCriptografado));
         }
 
 
         $valuesEdit = [
-            'usuarios_nome' => trim($post['usuarios_nome'] ?? $usuarios->usuarios_nome),
-            'usuarios_escolaridade' => $post['usuarios_escolaridade'] ?? $usuarios->usuarios_escolaridade,
-            'usuarios_email' => trim($post['usuarios_email'] ?? $usuarios->usuarios_email),
-            'usuarios_ativo' => $post['usuarios_ativo'] ?? $usuarios->usuarios_ativo,
-            'usuarios_nivel' => $post['usuarios_nivel'] ?? $usuarios->usuarios_nivel,
+            'usuarios_nome' => trim($post['usuarios_nome'] ?? $usuarioEdit->usuarios_nome),
+            'usuarios_escolaridade' => $post['usuarios_escolaridade'] ?? $usuarioEdit->usuarios_escolaridade,
+            'usuarios_email' => trim($post['usuarios_email'] ?? $usuarioEdit->usuarios_email),
+            'usuarios_ativo' => $post['usuarios_ativo'] ?? $usuarioEdit->usuarios_ativo,
+            'usuarios_nivel' => $post['usuarios_nivel'] ?? $usuarioEdit->usuarios_nivel,
             'usuarios_atualizado_em' => date('Y-m-d H:i:s'),
         ];
 
 
 
+        if (empty($valuesEdit['usuarios_nome'])) {
 
-
-        $dataLimite = (new DateTime())->modify('-10 days');
-        $dataLimitePosterior = (new DateTime())->modify('+10 days');
-        $dataHoje = strtotime(date('d/m/Y'));
-
-
-        // Validação de 10 dias antes do dia atual.
-        // O inicio do experimento nao pode ser menor que 10 dias que hoje
-        if (strtotime($valuesEdit['experimentos_inicio']) < strtotime($dataLimite->format('Y-m-d'))) {
-            $_SESSION['msg'] = ['texto' => "A data de início não pode ser anterior a 10 dias atrás.", 'color' => 'danger'];
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
-        }
-
-
-        // Validação de 10 dias depois do dia atual.
-        // O inicio do experimento nao pode ser maior que 10 dias que hoje
-        if (strtotime($valuesEdit['experimentos_inicio']) > strtotime($dataLimitePosterior->format('Y-m-d'))) {
-            $_SESSION['msg'] = ['texto' => "A data de início não pode ser maior que 10 dias. ", 'color' => 'danger'];
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
-        }
-
-        // data do experimento final do experimento nao pode ser menor que hoje
-        if (strtotime($valuesEdit['experimentos_final']) < $dataHoje) {
-            $_SESSION['msg'] = ['texto' => "A data final do experimento não pode ser inferior a data atual.", 'color' => 'danger'];
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
-        }
-
-
-
-        // Data final nao pode ser menor que a data de inicio
-        if (strtotime($valuesEdit['experimentos_final']) < strtotime($valuesEdit['experimentos_inicio'])) {
             $_SESSION['msg'] = [
-                'texto' => "A data final do experimento não pode ser menor que a inicial",
+                'texto' => 'O campo de usuário não pode ser vazio!',
+                'color' => 'danger'
+            ];
+            $this->redirect(base_url('adm/detailsUser/' . $idCriptografado));
+        }
+
+        if (empty($valuesEdit['usuarios_escolaridade'])) {
+
+            $_SESSION['msg'] = [
+                'texto' => 'O campo de escolaridade não pode ser vazio!',
+                'color' => 'danger'
+            ];
+            $this->redirect(base_url('adm/detailsUser/' . $idCriptografado));
+        }
+
+
+        if (empty($valuesEdit['usuarios_email'])) {
+
+            $_SESSION['msg'] = [
+                'texto' => 'O campo de email não pode ser vazio!',
+                'color' => 'danger'
+            ];
+            $this->redirect(base_url('adm/detailsUser/' . $idCriptografado));
+        }
+
+        if (!filter_var($valuesEdit['usuarios_email'], FILTER_VALIDATE_EMAIL)) {
+            $_SESSION['msg'] = [
+                'texto' => 'Formato de email inválido!',
                 'color' => 'danger',
             ];
 
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
-        }
-
-
-        //titulo nao pode ter menos que 5
-        if (strlen(trim($valuesEdit['experimentos_titulo'])) < 5) {
-            $_SESSION['msg'] = [
-                'texto' => 'O título deve possuir pelo menos 5 caracteres.',
-                'color' => 'danger'
-            ];
-
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
-        }
-
-        // Validação de limites de caracteres
-        if (strlen(trim($valuesEdit['experimentos_titulo'])) > 80) {
-            $_SESSION['msg'] = [
-                'texto' => 'O título deve possuir menos de 80 caracteres.',
-                'color' => 'danger'
-            ];
-
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
+            $this->redirect(base_url('adm/detailsUser/' . $idCriptografado));
         }
 
 
 
-        if (strlen(trim($valuesEdit['experimentos_sala'])) < 5) {
+        if (!$this->allUsers->UpdateExperimentosADM(null, $where, $valuesEdit)) {
             $_SESSION['msg'] = [
-                'texto' => 'É necessário ter ao menos 5 caracteres no campo de sala!',
+                'texto' => 'Erro ao editar os dados desse usuário',
                 'color' => 'danger'
             ];
 
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
-        }
-
-
-        if (!$this->bancadasExperimento->UpdateExperimentosADM($join, $where, $valuesEdit)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Erro ao editar este experimento',
-                'color' => 'danger'
-            ];
-
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
+            $this->redirect(base_url('adm/detailsUser/' . $idCriptografado));
         }
 
 
         $_SESSION['msg'] = [
-            'texto' => 'Experimento editado com sucesso!',
+            'texto' => 'Usuário editado com sucesso!',
             'color' => 'success',
         ];
 
-        $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
+        $this->redirect(base_url('adm/usuarios'));
     }
 
 

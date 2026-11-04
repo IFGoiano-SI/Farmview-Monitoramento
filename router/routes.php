@@ -45,6 +45,7 @@ $routes = [
     '/adm/usuarios'                   => ['AdminController', 'listarUsuarios'],
     '/adm/detailsUser/:id'            => ['AdminController', 'detailsUser'],
     '/adm/deletarUsuario/:id'         => ['AdminController', 'deletarUsuario'],
+    '/adm/editarUsuario'              => ['AdminController', 'editarUsuario'],
 
 
 
