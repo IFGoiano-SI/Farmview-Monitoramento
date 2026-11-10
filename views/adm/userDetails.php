@@ -189,7 +189,7 @@
                 <h4><a href="<?= base_url('adm/listarUsuarios') ?>"><i class="bi bi-arrow-left" style="color: black"></i></a> &nbsp;Dados pessoais</h4>
             </div>
 
-            <div class="container mt-5" style="background-color: #f0f0f07a; border-radius: 10px; padding: 15px 25px;">
+            <div class="container mt-3" style="background-color: #f0f0f07a; border-radius: 10px; padding: 15px 25px;">
                 <h5 class="mt-3"> Detalhes de: <strong><?= $usuarios->usuarios_nome ?></strong> - ID: #0<?= $usuarios->usuarios_id ?></h5>
 
                 <form action="<?= base_url('adm/editarUsuario') ?>" method="post" enctype="multipart/form-data">

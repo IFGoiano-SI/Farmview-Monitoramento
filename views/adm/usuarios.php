@@ -191,23 +191,10 @@
 
             <?php endif; ?>
 
-            <?php
-            $limite = 8;
-            $totalRegistros = count($usuarios);
-            $totalPaginas = max(1, (int) ceil($totalRegistros / $limite));
-
-            $paginaAtual = max(1, (int) ($_GET['pagina'] ?? 1));
-            $paginaAtual = min($paginaAtual, $totalPaginas);
-
-            $offset = ($paginaAtual - 1) * $limite;
-
-            $usuariosPaginados = array_slice($usuarios, $offset, $limite);
-            ?>
-
             <div class="listTable">
 
                 <div class="campoUser mt-5">
-                    <input type="search" class="form-control" placeholder="Pesquise por um usuário" name="pesquisarUser" id="pesquisarUser">
+                    <input type="search" class="form-control" placeholder="Pesquise por um usuário" name="pesquisarUser" id="pesquisarUser" value="">
                     <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createNewUser" style="width: 200px;"> <i class="bi bi-plus-lg"></i> Novo usuário </button>
                 </div>
 
@@ -277,7 +264,7 @@
                                                 accept="image/*">
                                         </div>
 
-                                         <div class="col-md-6 mt-4 mb-3">
+                                        <div class="col-md-6 mt-4 mb-3">
                                             <label for="usuarios_nivel">Nível do usuário</label>
                                             <select name="usuarios_nivel"
                                                 class="form-control"
@@ -317,9 +304,9 @@
                                 <th scope="col">Detalhar</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <?php foreach ($usuariosPaginados as $user): ?>
-                                <tr>
+                        <tbody id="tabelaUsuarios">
+                            <?php foreach ($usuarios as $user): ?>
+                                <tr data-nome="<?= esc($user->usuarios_nome) ?>">
                                     <th scope="row">
                                         <img
                                             src="<?= esc(base_url($user->usuarios_imagem)) ?>"
@@ -327,7 +314,7 @@
                                             style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
                                     </th>
                                     <td>#0<?= esc($user->usuarios_id) ?></td>
-                                    <td><?= esc(mb_strimwidth($user->usuarios_nome, 0, '50', '...')) ?></td>
+                                    <td class="nomeUsuario"><?= esc(mb_strimwidth($user->usuarios_nome, 0, '50', '...')) ?></td>
                                     <td><?= esc($user->usuarios_escolaridade) ?></td>
                                     <td> <?= $user->usuarios_ativo == '1' ? 'Ativo' : 'Inativo' ?>
                                     </td>
@@ -350,52 +337,9 @@
 
             <!-- Paginação -->
 
-            <?php if ($totalPaginas > 1): ?>
-                <nav aria-label="Paginação dos experimentos">
-                    <ul class="pagination justify-content-center mt-5">
-
-                        <!-- Anterior -->
-                        <li class="page-item <?= $paginaAtual === 1 ? 'disabled' : '' ?>">
-                            <?php if ($paginaAtual > 1): ?>
-                                <a class="page-link" href="?pagina=<?= $paginaAtual - 1 ?>">
-                                    Anterior
-                                </a>
-                            <?php else: ?>
-                                <span class="page-link">Anterior</span>
-                            <?php endif; ?>
-                        </li>
-
-                        <!-- Números das páginas -->
-                        <?php for ($i = 1; $i <= $totalPaginas; $i++): ?>
-                            <li class="page-item <?= $i === $paginaAtual ? 'active' : '' ?>">
-
-                                <?php if ($i === $paginaAtual): ?>
-                                    <span class="page-link" aria-current="page">
-                                        <?= $i ?>
-                                    </span>
-                                <?php else: ?>
-                                    <a class="page-link" href="?pagina=<?= $i ?>">
-                                        <?= $i ?>
-                                    </a>
-                                <?php endif; ?>
-
-                            </li>
-                        <?php endfor; ?>
-
-                        <!-- Próxima -->
-                        <li class="page-item <?= $paginaAtual === $totalPaginas ? 'disabled' : '' ?>">
-                            <?php if ($paginaAtual < $totalPaginas): ?>
-                                <a class="page-link" href="?pagina=<?= $paginaAtual + 1 ?>">
-                                    Próxima
-                                </a>
-                            <?php else: ?>
-                                <span class="page-link">Próxima</span>
-                            <?php endif; ?>
-                        </li>
-
-                    </ul>
-                </nav>
-            <?php endif; ?>
+            <nav id="paginacaoUsuarios" aria-label="Paginação dos usuários">
+                <ul id="paginasUsuarios" class="pagination justify-content-center mt-5"></ul>
+            </nav>
 
         </div>
 
@@ -440,6 +384,83 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
         crossorigin="anonymous"></script>
+
+
+    <script>
+        const pesquisa = document.getElementById('pesquisarUser');
+        const tabela = document.getElementById('tabelaUsuarios');
+        const linhas = Array.from(tabela.querySelectorAll('tr'));
+        const paginas = document.getElementById('paginasUsuarios');
+        const navegacao = document.getElementById('paginacaoUsuarios');
+        const limite = 8;
+        let paginaAtual = 1;
+
+        const semResultados = document.createElement('tr');
+        const mensagem = document.createElement('td');
+        mensagem.colSpan = 7;
+        mensagem.className = 'text-center';
+        mensagem.textContent = 'Nenhum usuário encontrado.';
+        semResultados.appendChild(mensagem);
+        tabela.appendChild(semResultados);
+
+        function normalizar(texto) {
+            return texto.normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase().trim();
+        }
+
+        function adicionarBotao(texto, destino, desabilitado = false, ativo = false) {
+            const item = document.createElement('li');
+            item.className = 'page-item';
+            item.classList.toggle('disabled', desabilitado);
+            item.classList.toggle('active', ativo);
+
+            const botao = document.createElement('button');
+            botao.type = 'button';
+            botao.className = 'page-link';
+            botao.textContent = texto;
+            botao.disabled = desabilitado;
+            if (ativo) botao.setAttribute('aria-current', 'page');
+            botao.addEventListener('click', function () {
+                paginaAtual = destino;
+                atualizarTabela();
+            });
+            item.appendChild(botao);
+            paginas.appendChild(item);
+        }
+
+        function atualizarTabela() {
+            const termo = normalizar(pesquisa.value);
+            const filtradas = linhas.filter(function (linha) {
+                return normalizar(linha.dataset.nome).includes(termo);
+            });
+            const totalPaginas = Math.max(1, Math.ceil(filtradas.length / limite));
+            paginaAtual = Math.min(paginaAtual, totalPaginas);
+            const inicio = (paginaAtual - 1) * limite;
+
+            linhas.forEach(linha => linha.hidden = true);
+            filtradas.slice(inicio, inicio + limite)
+                .forEach(linha => linha.hidden = false);
+            semResultados.hidden = filtradas.length !== 0;
+
+            paginas.replaceChildren();
+            navegacao.hidden = totalPaginas <= 1;
+            if (totalPaginas <= 1) return;
+
+            adicionarBotao('Anterior', paginaAtual - 1, paginaAtual === 1);
+            for (let pagina = 1; pagina <= totalPaginas; pagina++) {
+                adicionarBotao(String(pagina), pagina, false, pagina === paginaAtual);
+            }
+            adicionarBotao('Próxima', paginaAtual + 1, paginaAtual === totalPaginas);
+        }
+
+        pesquisa.addEventListener('input', function () {
+            paginaAtual = 1;
+            atualizarTabela();
+        });
+
+        atualizarTabela();
+    </script>
 
 
 </body>

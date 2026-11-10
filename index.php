@@ -6,7 +6,7 @@ ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 
 
-$_SESSION['url_rasp'] = '10.20.51.241:5000';
+$_SESSION['url_rasp'] = '192.168.0.127:5000';
 require_once __DIR__ . '/Config/helpers.php';
 date_default_timezone_set('America/Sao_Paulo');
 

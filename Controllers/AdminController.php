@@ -477,18 +477,6 @@ class AdminController extends RenderView
         $usuarioEdit =  $this->allUsers->selectPesquisar(null, $where)->fetch(PDO::FETCH_OBJ);
 
 
-        echo '<pre>';
-        echo "Condição da consulta:\n";
-        var_dump($where);
-
-        echo "\nTipo retornado:\n";
-        var_dump(gettype($usuarioEdit));
-
-        echo "\nDados retornados:\n";
-        var_dump($usuarioEdit);
-        echo '</pre>';
-        exit;
-
 
 
         if (!$usuarioEdit) {
@@ -547,6 +535,55 @@ class AdminController extends RenderView
             ];
 
             $this->redirect(base_url('adm/detailsUser/' . $idCriptografado));
+        }
+
+        $arquivo = $_FILES['usuarios_imagem'] ?? null;
+        $erroUpload = $arquivo['error'] ?? UPLOAD_ERR_NO_FILE;
+        $caminhoNovaImagem = null;
+
+        if ($erroUpload !== UPLOAD_ERR_NO_FILE) {
+            $mensagemErro = null;
+            $mime = null;
+
+            if (in_array($erroUpload, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
+                $mensagemErro = 'A imagem excedeu o limite de upload.';
+            } elseif ($erroUpload !== UPLOAD_ERR_OK) {
+                $mensagemErro = 'Erro ao receber a imagem de perfil.';
+            } elseif (!$this->conexao->validaImagem($arquivo)) {
+                $mensagemErro = 'Selecione uma imagem de até 2 MB.';
+            } else {
+                $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($arquivo['tmp_name']);
+
+                if (!in_array($mime, ['image/jpeg', 'image/png'], true)) {
+                    $mensagemErro = 'Selecione uma imagem JPG, JPEG ou PNG.';
+                }
+            }
+
+            if ($mensagemErro !== null) {
+                $_SESSION['msg'] = [
+                    'texto' => $mensagemErro,
+                    'color' => 'danger',
+                ];
+
+                $this->redirect(base_url('adm/detailsUser/' . $idCriptografado));
+                return;
+            }
+
+            $extensao = $mime === 'image/png' ? 'png' : 'jpg';
+            $nomeArquivo = bin2hex(random_bytes(16)) . '.' . $extensao;
+            $caminhoNovaImagem = __DIR__ . '/../Public/uploadImages/' . $nomeArquivo;
+
+            if (!move_uploaded_file($arquivo['tmp_name'], $caminhoNovaImagem)) {
+                $_SESSION['msg'] = [
+                    'texto' => 'Erro ao salvar a nova foto de perfil.',
+                    'color' => 'danger',
+                ];
+
+                $this->redirect(base_url('adm/detailsUser/' . $idCriptografado));
+                return;
+            }
+
+            $valuesEdit['usuarios_imagem'] = 'Public/uploadImages/' . $nomeArquivo;
         }
 
 
