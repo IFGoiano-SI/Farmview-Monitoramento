@@ -291,7 +291,7 @@
                     </div>
                 </div>
 
-                <div class="tabelaVideos mt-5" style="width: 80%; margin: 0 auto;">
+                <div class="tabelaVideos table-responsive mt-5" style="width: 80%; margin: 0 auto;">
                     <table class="table table-striped ">
                         <thead>
                             <tr>

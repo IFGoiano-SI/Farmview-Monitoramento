@@ -41,9 +41,15 @@
         .infoQuant {
             display: flex;
             align-items: center;
+            gap: 8px;
+        }
+
+        .imgInfo {
+            flex-shrink: 0;
         }
 
         .imgInfoQuant {
+            display: block;
             width: 50px;
             height: 50px;
             border-radius: 50%;
@@ -54,30 +60,68 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            width: 100%;
+            gap: 8px;
+            flex: 1;
+            min-width: 0;
         }
 
         .nomeInfo {
-            margin-left: 8px;
-            display: flex;
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .nomeInfo p {
+            margin: 0;
+            font-size: 11pt;
         }
 
         .totInfo {
             background-color: green;
             color: white;
-            border-radius: 100%;
+            border-radius: 50%;
             width: 30px;
             height: 30px;
+            flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding-top: 15px;
-
         }
 
-
         .totInfo p {
+            margin: 0;
             font-size: 13pt;
+        }
+
+        .infoList {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .infoList .groupInfo {
+            box-sizing: border-box;
+            flex: 1 1 260px;
+            min-width: 0;
+            max-width: 350px;
+        }
+
+        .nomeInfo {
+            min-width: 0;
+            overflow-wrap: break-word;
+        }
+
+        @media (max-width: 600px) {
+            .infoList {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .infoList .groupInfo {
+                flex: auto;
+                width: 100%;
+                max-width: none;
+                margin: 0;
+            }
         }
     </style>
 </head>
@@ -199,7 +243,7 @@
                         <div class="textInfo">
                             <div class="nomeInfo">
 
-                                <p style="font-size: 13pt;"><?= $topExperimentos->nome ?></p>
+                                <p style="font-size: 11pt;"><?= $topExperimentos->nome ?></p>
                             </div>
                             <div class="totInfo">
                                 <p><?= $topExperimentos->total_experimentos ?></p>
@@ -222,7 +266,7 @@
 
             </div>
 
-             <?php
+            <?php
             $limite = 5;
             $totalRegistros = count($user);
             $totalPaginas = max(1, (int) ceil($totalRegistros / $limite));
@@ -238,7 +282,7 @@
             <div class="listTable">
                 <h4 class="mt-5" style="margin-left: 20px;">Lista de experimentos</h4>
 
-                <div class="tabelaVideos mt-5" style="width: 80%; margin: 0 auto;">
+                <div class="tabelaVideos table-responsive mt-5" style="width: 80%; margin: 0 auto;">
                     <table class="table table-striped ">
                         <thead>
                             <tr>
@@ -262,8 +306,8 @@
                                     <td style="color: <?= $user->experimentos_status == 'Ativo' ? 'green' : 'red' ?>;">
                                         <?= htmlspecialchars($user->experimentos_status) ?>
                                     </td>
-                                    
-                                    <form action="<?= base_url('adm/infoUser/'. rtrim(base64_encode((string) $user->experimentos_id), '=')) ?>" method="get">
+
+                                    <form action="<?= base_url('adm/infoUser/' . rtrim(base64_encode((string) $user->experimentos_id), '=')) ?>" method="get">
                                         <td><button type="submit" class="btn btn-outline-primary">Ver mais</button></td>
 
                                     </form>
