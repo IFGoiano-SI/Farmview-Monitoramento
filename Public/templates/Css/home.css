@@ -1955,3 +1955,216 @@ p {
 .btn-exportar i {
     font-size: 16px;
 }
+
+/* =========================================================
+   AJUSTE PARA TELAS DE COMPUTADOR (a partir de 1221px)
+   Mantém o layout original (referência: 1920px) e apenas
+   troca larguras fixas por larguras fluidas com o mesmo
+   tamanho máximo, para caber em 1280, 1366, 1440, 1600...
+   As regras acima deste bloco não foram alteradas.
+========================================================= */
+@media (min-width: 1221px) {
+
+    /* Sidebar: largura mínima para o logo e os links não ficarem espremidos */
+    .fullScreen .sideBar {
+        width: 12%;
+        min-width: 210px;
+        max-width: 260px;
+        flex-shrink: 0;
+    }
+
+    .fullScreen .linksDashboard {
+        max-width: calc(100% - 20px);
+    }
+
+    .fullScreen .contentScreen {
+        flex: 1;
+        width: auto;
+        min-width: 0;
+    }
+
+    /* Etiqueta de escolaridade/perfil em uma linha só */
+    .fullScreen .navName p {
+        width: fit-content;
+        min-width: 90px;
+        padding: 5px 12px;
+        white-space: nowrap;
+    }
+
+    /* Gráficos + botão "Finalizar": o botão fica à direita sem sobrepor os gráficos */
+    .fullScreen .Finalizacao {
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        padding: 0 clamp(16px, 2vw, 40px);
+    }
+
+    .fullScreen .graficosSensores {
+        flex: 1;
+        width: auto;
+        min-width: 0;
+    }
+
+    .fullScreen .cardGrafico {
+        flex: 1;
+        width: auto;
+        min-width: 0;
+    }
+
+    .fullScreen .campoBotao {
+        flex-shrink: 0;
+    }
+
+    /* Gráfico ocupa o espaço que sobra; a caixa "Atual" não sai do cartão */
+    .fullScreen .grafico {
+        flex: 1;
+        width: auto;
+        min-width: 0;
+    }
+
+    /* Câmera e sensores: mesma disposição, encolhendo juntos */
+    .fullScreen .mainContent {
+        gap: clamp(24px, 3vw, 60px);
+        padding: 0 clamp(16px, 2vw, 40px) 40px;
+    }
+
+    .fullScreen .contentCam {
+        flex: 0 1 700px;
+        width: auto;
+        min-width: 0;
+        height: auto;
+    }
+
+    .fullScreen .contentCam > form {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+
+    .fullScreen .cam {
+        width: 100%;
+        max-width: 600px;
+        height: auto;
+        aspect-ratio: 4 / 3;
+    }
+
+    .fullScreen .buttonCam {
+        flex-wrap: wrap;
+        gap: 12px 20px;
+    }
+
+    .fullScreen .OnCam,
+    .fullScreen .OffCam {
+        width: auto;
+        min-width: 170px;
+        padding: 0 16px;
+        white-space: nowrap;
+    }
+
+    /* Tomadas e sensores lado a lado em duas colunas, como em 1920px */
+    .fullScreen .contentSensores {
+        flex: 0 1 670px;
+        width: auto;
+        min-width: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 0 20px;
+        align-items: start;
+    }
+
+    .fullScreen .groupUmidade {
+        width: 100%;
+    }
+
+    .fullScreen .groupSensores {
+        width: 100%;
+        max-width: 315px;
+        height: auto;
+        min-height: 135px;
+    }
+
+    .fullScreen .sensoresUmidade {
+        width: 100%;
+        max-width: 280px;
+        height: auto;
+        min-height: 135px;
+    }
+
+    /* Tabela de vídeos um pouco mais larga, alinhada ao cabeçalho da página */
+    .fullScreen .tabelaVideos {
+        width: 92%;
+    }
+
+    /* Tabela de vídeos: título e caminho do arquivo quebram linha
+       em vez de esconder as colunas da direita */
+    .fullScreen .tabelaVideos table td:nth-child(2),
+    .fullScreen .tabelaVideos table td:nth-child(3) {
+        white-space: normal;
+        word-break: break-word;
+        min-width: 160px;
+    }
+
+    /* Notebooks (até 1535px): "Gravar vídeo" em cima, botões da câmera lado a lado embaixo */
+    @media (max-width: 1535px) {
+        .fullScreen .buttonCam {
+            justify-content: center;
+        }
+
+        .fullScreen .buttonCam #formGravacao {
+            flex: 1 1 100%;
+            display: flex;
+            justify-content: center;
+        }
+    }
+
+    /* Formulário de edição: evita a rolagem horizontal de 2px */
+    .fullScreen .container > form > .row {
+        margin-inline: 0;
+    }
+}
+
+/* Telas de computador menores (992px a 1220px): mantém o layout desta
+   faixa (menu no topo) e corrige os mesmos detalhes do bloco acima */
+@media (min-width: 992px) and (max-width: 1220px) {
+    .fullScreen .navName p {
+        width: fit-content;
+        min-width: 90px;
+        padding: 5px 12px;
+        white-space: nowrap;
+    }
+
+    .fullScreen .contentCam > form {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+
+    .fullScreen .contentCam {
+        min-height: 0;
+    }
+
+    .fullScreen .OnCam,
+    .fullScreen .OffCam {
+        width: auto;
+        min-width: 170px;
+        padding: 0 16px;
+        white-space: nowrap;
+    }
+
+    .fullScreen .grafico {
+        flex: 1;
+        width: auto;
+        min-width: 0;
+    }
+
+    .fullScreen .tabelaVideos {
+        width: 95%;
+    }
+
+    .fullScreen .tabelaVideos table td:nth-child(2),
+    .fullScreen .tabelaVideos table td:nth-child(3) {
+        white-space: normal;
+        word-break: break-word;
+        min-width: 140px;
+    }
+}

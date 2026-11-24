@@ -408,3 +408,18 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+CREATE TABLE IF NOT EXISTS `videos_experimentos` (
+  `videos_id`        INT(11)      NOT NULL AUTO_INCREMENT,
+  `path_video`       VARCHAR(255) NOT NULL,
+  `usuarios_id`      INT(11)      NOT NULL,
+  `experimentos_id`  INT(11)      NOT NULL,
+  `duracao_segundos` INT(11)      NOT NULL DEFAULT 0,
+  `tamanho_bytes`    BIGINT       NOT NULL DEFAULT 0,
+  `videos_status`    VARCHAR(20)  NOT NULL DEFAULT 'Ativo',
+  `criado_em`        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `deletado_em`      DATETIME     NULL DEFAULT NULL,
+  PRIMARY KEY (`videos_id`),
+  KEY `idx_videos_usuario` (`usuarios_id`, `videos_status`),
+  KEY `idx_videos_experimento` (`experimentos_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
