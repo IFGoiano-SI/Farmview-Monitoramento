@@ -1,7 +1,16 @@
+# FarmView — regras de acesso (Apache)
+Options -Indexes
 RewriteEngine on
 
+# Bloqueia arquivos ocultos (.env, .git, .htaccess...).
+RewriteRule (^|/)\. - [F,L]
+
+# Somente index.php e os arquivos estáticos de Public/ podem ser acessados
+# diretamente. Código, configuração, banco, logs, vídeos e dependências não.
+RewriteRule ^(Config|Controllers|Models|Services|core|router|views|vendor|storage|db|docker|raspberry|tests)(/|$) - [F,L]
+RewriteRule ^[^/]+\.(sql|db|py|json|lock|ya?ml|md|env|sh|conf|txt|log|xml|dist|avi|mp4)$ - [F,L]
+RewriteRule ^(Dockerfile|composer\.phar)$ - [F,L]
+
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_FILENAME} !-f 
-
-
-RewriteRule ^(.*)$ index.php?url=$1 [QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]

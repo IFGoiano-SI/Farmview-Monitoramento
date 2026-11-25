@@ -1,6 +1,42 @@
+# Configuração local / segredos
+.env
+*.env
+!.env.example
+
+# Dependências (instaladas com `composer install`)
+/vendor/
+
+# Arquivos gerados em execução
+/storage/logs/*
+/storage/videos/*
+/storage/cache/*
+!/storage/**/.gitkeep
+/Public/uploadImages/*
+!/Public/uploadImages/Noimage.png
+/Public/templates/Images/*
+!/Public/templates/Images/Noimage.png
+/Public/UploadsVideos/
+
+# Raspberry
+/raspberry/farmview.db*
+/raspberry/config_farmview.json
+/raspberry/gravacoes/
+/raspberry/logs/
+
+# Python
 venv/
 .venv/
 __pycache__/
 *.py[cod]
+.pytest_cache/
+
+# PHP / ferramentas
+.phpunit.result.cache
+.phpunit.cache/
+*.log
+*.db
 *.db-shm
 *.db-wal
+.DS_Store
+.idea/
+.vscode/

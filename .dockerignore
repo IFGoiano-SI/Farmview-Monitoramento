@@ -1,0 +1,15 @@
+.git
+.github
+.env
+vendor
+storage/logs/*
+storage/videos/*
+storage/cache/*
+Public/UploadsVideos
+raspberry
+tests
+venv
+.venv
+**/__pycache__
+*.md
+docker-compose*.yml
