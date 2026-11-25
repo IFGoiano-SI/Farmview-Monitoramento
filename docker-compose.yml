@@ -53,7 +53,9 @@ services:
       - imagens_experimentos:/var/www/html/Public/templates/Images
       - videos:/var/www/html/storage/videos
     healthcheck:
-      test: [ "CMD-SHELL", "curl -fsS -o /dev/null http://localhost/login || exit 1" ]
+      # Verifica apenas se o Apache responde (arquivo estático, sem depender do banco).
+      # Problemas de banco aparecem na página/log, não impedem o Nginx de subir.
+      test: [ "CMD-SHELL", "curl -fsS -o /dev/null http://localhost/Public/templates/Css/login.css || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 30
