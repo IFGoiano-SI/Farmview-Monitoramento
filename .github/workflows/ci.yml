@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  php:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: farmview_test
+        ports: [ "3306:3306" ]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: pdo_mysql, gd, fileinfo, curl
+      - run: composer install --no-interaction --prefer-dist
+      - name: Sintaxe PHP
+        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l > /dev/null
+      - name: Carregar schema
+        run: mysql -h 127.0.0.1 -uroot -proot farmview_test < db/schema.sql
+      - name: PHPUnit
+        env:
+          DB_TEST: "1"
+          DB_HOST: 127.0.0.1
+          DB_PORT: "3306"
+          DB_NAME: farmview_test
+          DB_USER: root
+          DB_PASS: root
+        run: vendor/bin/phpunit
+
+  raspberry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r raspberry/requirements-dev.txt
+      - run: python -m pytest -q tests/raspberry
