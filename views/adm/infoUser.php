@@ -1,4 +1,3 @@
-<?php redirectPages(); ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 
@@ -88,7 +87,6 @@
     $foto = $_SESSION['usuarios_logado']->usuarios_imagem;
     $nome = $_SESSION['usuarios_logado']->usuarios_nome;
     $escolaridade = $_SESSION['usuarios_logado']->usuarios_escolaridade;
-    $url_rasp = $_SESSION['url_rasp'];
     ?>
 
     <div class="fullScreen">
@@ -128,10 +126,7 @@
         <div class="contentScreen">
 
             <div class="alert-container">
-                <?php if (isset($_SESSION['msg'])): ?>
-                    <?= msg($_SESSION['msg']['texto'], $_SESSION['msg']['color']); ?>
-                    <?php unset($_SESSION['msg']); ?>
-                <?php endif; ?>
+                <?php partial('alerts'); ?>
             </div>
 
             <!-- ===================== NAVBAR ===================== -->
@@ -145,7 +140,7 @@
 
                     <div class="navLogout">
                         <a href="#">
-                            <img id="imagePerson" src="<?= base_url($foto) ?>" alt="Foto de perfil">
+                            <img id="imagePerson" src="<?= esc(base_url($foto)) ?>" alt="Foto de perfil">
                         </a>
 
 
@@ -156,30 +151,7 @@
                 </div>
 
 
-                <div class="modal fade" id="meuModalSair" tabindex="-1">
-                    <div class="modal-dialog modal-dialog-centered modal-md">
-                        <div class="modal-content">
-
-                            <div class="modal-header">
-                                <h5 class="modal-title" style="text-align: center !important; font-size: x-large;"></h5>
-                            </div>
-
-                            <div class="modal-body">
-                                <form action="<?= base_url('login/logout') ?>" method="post">
-                                    <h4 class="text-center mt-4 mb-5">Deseja sair da sua conta?</h4>
-                                    <p class="text-center">
-                                        <button type="button" class="btn-voltar" data-bs-dismiss="modal">Voltar</button>
-                                        <button type="submit" class="btn-finalizar" data-bs-dismiss="modal"
-                                            data-bs-toggle="modal" data-bs-target="#modal2">Sair</button>
-                                    </p>
-                                </form>
-                            </div>
-
-                            <div class="modal-footer"></div>
-
-                        </div>
-                    </div>
-                </div>
+                <?php partial('logout_modal'); ?>
 
             <?php endif; ?>
 
@@ -189,11 +161,11 @@
 
             <div class="cardInfo" style="padding-left: 30px; margin-top:40px;">
                 <div class="card" style="width: 18rem; ">
-                    <img id="imagemExperimentos" src="<?= base_url($infoUser->experimentos_imagem) ?>" class="card-img-top" alt="...">
+                    <img id="imagemExperimentos" src="<?= esc(base_url($infoUser->experimentos_imagem)) ?>" class="card-img-top" alt="...">
 
                     <div class="card-body">
-                        <h5 class="card-title"><strong><?= $infoUser->experimentos_titulo ?></strong></h5>
-                        <p class="card-text text-small"> <strong>Experimento de: </strong> <?= $infoUser->usuarios_nome ?></p>
+                        <h5 class="card-title"><strong><?= esc($infoUser->experimentos_titulo) ?></strong></h5>
+                        <p class="card-text text-small"> <strong>Experimento de: </strong> <?= esc($infoUser->usuarios_nome) ?></p>
 
                         <div class="butaoCard" style="display: flex; gap: 10px">
                             <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#listaExperimentos">
@@ -203,9 +175,9 @@
                             <?php if ($infoUser->experimentos_status != 'Ativo'): ?>
 
                                 <form action="<?= base_url('adm/ativarExperimentos') ?>" method="post">
+<?= csrf_field() ?>
 
-                                    <input type="hidden" name="usuarios_id" value="<?= (int) $infoUser->usuario_id ?>">
-                                    <input type="hidden" name="experimentos_id" value="<?= $infoUser->experimentos_id ?>">
+                                                                        <input type="hidden" name="experimentos_id" value="<?= (int) $infoUser->experimentos_id ?>">
 
                                     <button type="submit" class="btn btn-warning">Ativar</button>
 
@@ -233,11 +205,12 @@
                         </div>
 
                         <form action="<?= base_url('adm/editarExperimentos') ?>" method="post" enctype="multipart/form-data">
+<?= csrf_field() ?>
                             <div class="modal-body">
                                 <div class="row">
 
                                     <!-- Id do experimento -->
-                                    <input type="hidden" name="experimentos_id" value="<?= $infoUser->experimentos_id ?>">
+                                    <input type="hidden" name="experimentos_id" value="<?= (int) $infoUser->experimentos_id ?>">
                                     <h5><i class="bi bi-leaf"></i>&nbsp; Experimentos</h5>
 
                                     <div class="col-md-6 mt-4">
@@ -269,7 +242,7 @@
 
                                     <div class="col-md-6 mt-4">
                                         <label for="experimentos_encerrado">Data de encerramento</label>
-                                        <input type="text" class="form-control" name="experimentos_encerrado" id="encerrado" placeholder="Data encerrada" value="<?= date('d/m/Y H:i:s', strtotime($infoUser->experimentos_encerrado)) ?>" readonly>
+                                        <input type="text" class="form-control" name="experimentos_encerrado" id="encerrado" placeholder="Data encerrada" value="<?= data_br($infoUser->experimentos_encerrado, 'd/m/Y H:i:s') ?>" readonly>
                                     </div>
 
 
@@ -294,7 +267,7 @@
 
                                     <div class="col-md-6 mt-4">
                                         <label for="bancadas_luzes">Luzes</label>
-                                        <input type="text" class="form-control" name="bancadas_luzes" id="bancadas_luzes" placeholder="Quantidade" value="<?= esc($infoUser->bancadas_luzes) ?>" readonly>
+                                        <input type="text" class="form-control" name="bancadas_luzes" id="bancadas_luzes" placeholder="Quantidade" value="<?= esc(luzes_texto($infoUser->bancadas_luzes, 'Nenhuma')) ?>" readonly>
                                     </div>
 
 
@@ -322,40 +295,7 @@
     </div>
 
 
-    <!-- ===================== FOOTER ===================== -->
-    <footer class="contentFooter" style="height: auto;">
-
-        <div class="footerMain">
-            <div class="aboutFooter">
-                <h4>FarmView</h4>
-                <p>
-                    Plataforma de monitoramento em ambientes controlados
-                </p>
-            </div>
-            <div class="linkFooter">
-                <h5>Parceiros</h5>
-
-                <ul>
-                    <li><a href="https://cebiobrasil.com.br/" target="_blank">CEBIO</a></li>
-                    <li>
-                        <a href="https://www.ifgoiano.edu.br/home/index.php/ceres" target="_blank">
-                            IF Goiano Campus Ceres
-                        </a>
-                    </li>
-                    <li><a href="https://goias.gov.br/fapeg/" target="_blank">FAPEG</a></li>
-                    <li><a href="https://lattes.cnpq.br/" target="_blank">CNPq</a></li>
-                    <li><a href="#">LabTI</a></li>
-                </ul>
-            </div>
-
-        </div>
-
-        <div class="footerBottom">
-            <p>© 2026 FarmView</p>
-            <p>IF Goiano — Campus Ceres</p>
-        </div>
-
-    </footer>
+    <?php partial('footer', ['estilo' => 'height: auto;']); ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"

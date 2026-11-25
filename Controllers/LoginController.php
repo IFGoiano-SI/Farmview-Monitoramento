@@ -2,401 +2,189 @@
 
 namespace Controllers;
 
-use Models\Database as Conexao;
-use \PDO;
-use \Ultis\RenderView;
-use \Ultis\Email;
-use \Ultis\FlaskService;
+use Models\ExperimentoModel;
+use Models\LoginTentativaModel;
+use Models\UsuarioModel;
+use Services\Email;
+use Services\Logger;
+use Services\Validacao;
 
-/**
- * Código Corrigido:
- * 1. Nome da classe ajustado para PascalCase (LoginController).
- * 2. Adicionado o 'extends RenderView' para permitir o carregamento das vistas.
- * 3. Substituída a função inexistente 'view()' por '$this->loadView()'.
- */
-class LoginController extends RenderView
+class LoginController extends BaseController
 {
-    private $usuarios;
-    private $experimentos;
-    private $participantes;
-    private $homeController;
-    private $flask;
+    private UsuarioModel $usuarios;
+    private LoginTentativaModel $tentativas;
 
     public function __construct()
     {
-        // Certifique-se de que a tabela no banco de dados se chama 'usuarios'
-        $this->usuarios = new Conexao('usuarios');
-        $this->experimentos = new Conexao('experimentos');
-        $this->participantes = new Conexao('participantes');
-        $this->homeController = new HomeController;
-        $this->flask = new FlaskService();
+        $this->usuarios = new UsuarioModel();
+        $this->tentativas = new LoginTentativaModel();
     }
 
-    /**
-     * Método auxiliar para redirecionamento com mensagens de sessão
-     */
-    protected function redirect($path, $mensagem = null)
+    public function index(): void
     {
-        if ($mensagem) {
-            $_SESSION['msg'] = $mensagem;
-        }
-        header("Location: {$path}");
-        exit();
+        $this->loadView('login/index', ['pagina' => 'Login']);
     }
 
-    /**
-     * Exibe a tela de login
-     */
-    public function index()
+    public function autenticar(): void
     {
-        $data = [];
-        $data['pagina'] = 'Login';
+        $email = trim((string) ($_POST['usuarios_email'] ?? ''));
+        $senha = (string) ($_POST['usuarios_senha'] ?? '');
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'desconhecido';
+        $old = ['usuarios_email' => $email];
 
-        // Verifica se existe uma pasta 'login' dentro de 'views' com um 'index.php'
-        return $this->loadView('login/index', $data);
+        if ($email === '' || $senha === '') {
+            $this->voltarComErro(base_url('login'), 'Preencha os campos de login!', $old);
+        }
+
+        if ($this->tentativas->bloqueado($ip, $email)) {
+            Logger::aviso('Login bloqueado por excesso de tentativas', ['email' => $email]);
+            $this->voltarComErro(
+                base_url('login'),
+                'Muitas tentativas de login. Aguarde ' . LoginTentativaModel::JANELA_MINUTOS . ' minutos e tente novamente.',
+                $old
+            );
+        }
+
+        $usuario = $this->usuarios->buscarParaLogin($email);
+
+        if (!$usuario || !password_verify($senha, (string) $usuario->usuarios_senha)) {
+            $this->tentativas->registrarFalha($ip, $email);
+            $this->voltarComErro(base_url('login'), 'Usuário ou senha inválida!', $old);
+        }
+
+        // A conta é verificada ANTES de criar a sessão.
+        if ((int) $usuario->usuarios_ativo !== 1) {
+            $this->voltarComErro(base_url('login'), 'Sua conta foi excluída, certifique com o administrador!', $old);
+        }
+
+        $nivel = (int) $usuario->usuarios_nivel;
+
+        if (!in_array($nivel, [1, 2], true)) {
+            $this->voltarComErro(base_url('login'), 'Você não tem permissão para acessar esta área.', $old);
+        }
+
+        $this->tentativas->limpar($ip, $email);
+
+        if (password_needs_rehash($usuario->usuarios_senha, PASSWORD_DEFAULT)) {
+            $this->usuarios->atualizar((int) $usuario->usuarios_id, [
+                'usuarios_senha' => password_hash($senha, PASSWORD_DEFAULT),
+            ]);
+        }
+
+        // Novo ID de sessão a cada login (evita fixação de sessão).
+        session_regenerate_id(true);
+        $_SESSION['usuarios_logado'] = $this->usuarios->buscarPorId((int) $usuario->usuarios_id);
+
+        flash('Login realizado com sucesso! - Seja bem vindo ' . $usuario->usuarios_nome);
+
+        if ($nivel === 2) {
+            $this->redirect(base_url('adm/index'));
+        }
+
+        $temExperimento = (new ExperimentoModel())->ativoDoUsuario((int) $usuario->usuarios_id);
+        $this->redirect(base_url($temExperimento ? 'home/dashboard' : 'home'));
     }
 
-    public function autenticar()
+    public function esqueciSenha(): void
     {
-        $post = $_POST;
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            die('Autenticar foi chamado sem POST. URL: ' . $_SERVER['REQUEST_URI']);
-        }
-
-        if (!isset($post['usuarios_email']) || !isset($post['usuarios_senha'])) {
-            $_SESSION['msg'] = [
-                'texto' => 'Preencha os campos de login!',
-                'color' => 'danger',
-            ];
-
-            $this->redirect(base_url('login'));
-        }
-
-        $login = $post['usuarios_email'];
-        $senha = $post['usuarios_senha'];
-
-        $where = "usuarios_email = '$login'";
-
-        $usuario = $this->usuarios->select(null, $where)->fetchObject();
-
-    
-
-        if (password_verify($senha, $usuario->usuarios_senha)) {
-            $_SESSION['usuarios_logado'] = $usuario;
-
-            if ($usuario) {
-                
-                if($usuario->usuarios_ativo == 0) {
-                    $_SESSION['msg'] = [
-                        'texto' => "Sua conta foi excluída, certifique com o administrador!",
-                        'color' => 'danger',
-                    ];
-
-                    $this->redirect(base_url('login'));
-
-                }
-                
-                if ($usuario->usuarios_nivel == 2) {
-
-
-                    $_SESSION['usuarios_logado'] = $usuario;
-                    $_SESSION['msg'] = [
-                        'texto' => "Login realizado com sucesso! - Seja bem vindo <strong>" . $_SESSION['usuarios_logado']->usuarios_nome . "</strong>",
-                        'color' => 'success',
-                    ];
-                    $this->redirect(base_url('adm/index'));
-                } else if ($usuario->usuarios_nivel == 1) {
-                    $_SESSION['usuarios_logado'] = $usuario;
-
-                    $_SESSION['msg'] = [
-                        'texto' => "Login realizado com sucesso! - Seja bem vindo <strong>" . $_SESSION['usuarios_logado']->usuarios_nome . "</strong>",
-                        'color' => 'success',
-                    ];
-
-                    $usuario_id = $_SESSION['usuarios_logado']->usuarios_id;
-
-
-                    $join = 'usuarios on usuarios_id = participantes_usuarios_id
-                 INNER JOIN experimentos on experimentos_id = participantes_experimentos_id
-                 INNER JOIN bancadas_experimentos on be_experimentos_id = experimentos_id
-                 INNER JOIN bancadas on bancadas_id = be_bancadas_id';
-                    $where = "experimentos_status = 'Ativo' AND participantes_usuarios_id =" . $usuario_id;
-                    $limit  = 1;
-
-                    $usuarioExperimento = $this->participantes->select($join, $where, $order = null, $limit)->fetch(PDO::FETCH_OBJ);
-
-                    if (!$usuarioExperimento) {
-                        $this->redirect(base_url('home'));
-                    } else {
-                        $this->redirect(base_url('home/dashboard'));
-                    }
-                } else {
-                    $_SESSION['msg'] = [
-                        'texto' => "Você não tem permissão para acessar esta área.",
-                        'color' => 'danger',
-                    ];
-                    $this->redirect(base_url('login'));
-                }
-            } else {
-                $_SESSION['msg'] = [
-                    'texto' => 'Usuário ou senha inválida!',
-                    'color' => 'danger',
-                ];
-
-                $_SESSION['old'] = $post;
-                $this->redirect(base_url('login'));
-            }
-        } else {
-
-            $_SESSION['msg'] = [
-                'texto' => 'Usuário ou senha inválida!',
-                'color' => 'danger',
-            ];
-
-            $_SESSION['old'] = $post;
-            $this->redirect(base_url('login'));
-        }
+        $this->loadView('login/esqueciSenha');
     }
 
-    public function esqueciSenha()
+    public function enviarEmail(): void
     {
+        $email = trim((string) ($_POST['usuarios_email'] ?? ''));
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'desconhecido';
+        $mensagemGenerica = 'Se o email estiver cadastrado, você receberá um link para alterar a senha.';
 
-        return $this->loadView('login/esqueciSenha', []);
-    }
-
-
-
-    public function enviarEmail()
-    {
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            return $this->loadView('login/esqueciSenha', []);
+        if ($email === '') {
+            $this->redirect(base_url('login/esqueciSenha'), 'Informe um email', 'danger');
         }
 
-
-
-        $email = $_POST['usuarios_email'] ?? '';
-
-        if (empty($email)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Informe um email',
-                'color' => 'danger',
-            ];
-
-            return $this->loadView('login/esqueciSenha', []);
+        if ($this->tentativas->bloqueado($ip, 'reset:' . $email)) {
+            $this->redirect(base_url('login/esqueciSenha'), 'Muitas solicitações. Aguarde alguns minutos.', 'danger');
         }
 
+        $this->tentativas->registrarFalha($ip, 'reset:' . $email);
+        $usuario = $this->usuarios->buscarPorEmail($email);
 
-        $where = "usuarios_email = '$email'";
-        $usuario = $this->usuarios->select(null, $where)->fetch(PDO::FETCH_OBJ);
-
-        if (!$usuario) {
-            $_SESSION['msg'] = [
-                'texto' => "Email inválido. Tente novamente!",
-                'color' => 'danger',
-            ];
-
-            return $this->loadView('login/esqueciSenha', []);
+        // Resposta idêntica para e-mails cadastrados ou não (evita enumeração).
+        if (!$usuario || (int) $usuario->usuarios_ativo !== 1) {
+            $this->redirect(base_url('login/esqueciSenha'), $mensagemGenerica);
         }
 
         $token = bin2hex(random_bytes(32));
+        $expira = date('Y-m-d H:i:s', strtotime('+1 hour'));
+        $this->usuarios->definirTokenReset((int) $usuario->usuarios_id, hash('sha256', $token), $expira);
 
-        $usuarios_expira_em = date('Y-m-d H:i:s', strtotime('+1 hour'));
-
-
-        $values = [
-            'usuarios_reset_hash' => $token,
-            'usuarios_expira_em' => $usuarios_expira_em,
-        ];
-
-        $whereUpdate = "usuarios_id = '$usuario->usuarios_id'";
-
-        $this->usuarios->update($whereUpdate, $values);
-
-        $emailClass = new Email();
-
-        $emailC = $emailClass->enviarEmai($usuario->usuarios_email, $token);
-
-        if ($emailC) {
-            $_SESSION['msg'] = [
-                'texto' => 'Email enviado com sucesso!',
-                'color' => 'success',
-            ];
-        } else {
-
-            $values = [
-                'usuarios_reset_hash' => null,
-                'usuarios_expira_em' => null,
-            ];
-
-            $whereUpdate = "usuarios_id = '$usuario->usuarios_id'";
-
-            $this->usuarios->update($whereUpdate, $values);
-
-            $_SESSION['msg'] = [
-                'texto' => "Ocorreu um erro ao enviar seu email",
-                'color' => 'danger',
-            ];
+        if (!(new Email())->enviarRecuperacaoSenha($usuario->usuarios_email, $token)) {
+            $this->usuarios->limparTokenReset((int) $usuario->usuarios_id);
+            $this->redirect(base_url('login/esqueciSenha'), 'Ocorreu um erro ao enviar seu email', 'danger');
         }
 
-        return $this->loadView('login/esqueciSenha', []);
+        $this->redirect(base_url('login/esqueciSenha'), $mensagemGenerica);
     }
 
-    public function alterarSenha()
+    public function alterarSenha(): void
     {
+        $token = (string) ($_GET['token'] ?? '');
 
-        $token = $_GET['token'] ?? '';
-
-        if (!$token) {
-            $_SESSION['msg'] = [
-                'texto' => 'Token inválido',
-                'color' => 'danger',
-            ];
-
-            return $this->redirect(base_url('login'));
+        if (!preg_match('/^[a-f0-9]{64}$/', $token)) {
+            $this->redirect(base_url('login'), 'Token inválido', 'danger');
         }
 
-        $where = "
-        usuarios_reset_hash = '$token'
-        and usuarios_expira_em > NOW()
-        
-        ";
-
-        $usuario = $this->usuarios->select(null, $where)->fetch(PDO::FETCH_OBJ);
-
-
-        if (!$usuario) {
-            $_SESSION['msgm'] = [
-                'texto' => 'Link expirado, tente novamente!',
-                'color' => 'danger',
-            ];
-            return $this->redirect(base_url('login'));
+        if (!$this->usuarios->buscarPorTokenReset(hash('sha256', $token))) {
+            $this->redirect(base_url('login'), 'Link expirado, tente novamente!', 'danger');
         }
 
         $_SESSION['token'] = $token;
-        return $this->loadView('login/alterarSenha', []);
+        $this->loadView('login/alterarSenha', ['token' => $token]);
     }
 
-
-    public function salvarSenha()
+    public function salvarSenha(): void
     {
+        $senha = (string) ($_POST['usuarios_senha'] ?? '');
+        $confirmar = (string) ($_POST['confirmarSenha'] ?? '');
+        $token = (string) ($_POST['token'] ?? '');
+        $voltar = base_url('login/alterarSenha?token=' . urlencode($token));
 
-        $senha = $_POST['usuarios_senha'] ?? '';
-        $confirmarSenha = $_POST['confirmarSenha'] ?? '';
-        $token = $_POST['token'] ?? '';
-
-
-        if (empty($senha) || empty($confirmarSenha)) {
-            $_SESSION['msg'] = [
-                'texto' => "Preencha os campos abaixo!",
-                'color' => 'danger',
-            ];
-
-            return $this->loadView('login/alterarSenha', []);
+        if (!preg_match('/^[a-f0-9]{64}$/', $token)) {
+            $this->redirect(base_url('login'), 'Token inválido', 'danger');
         }
 
-
-        if ($senha !== $confirmarSenha) {
-
-            $_SESSION['msg'] = [
-                'texto' => 'Os campos de senha não podem ser diferentes!',
-                'color' => 'danger',
-            ];
-
-            return $this->loadView('login/alterarSenha', []);
+        if ($senha === '' || $confirmar === '') {
+            $this->redirect($voltar, 'Preencha os campos abaixo!', 'danger');
         }
 
-
-        if (!$token) {
-            $_SESSION['msg'] = [
-                'texto' => "Token inválido",
-                'color' => 'danger',
-            ];
-
-            return $this->redirect(base_url('login'));
+        if ($senha !== $confirmar) {
+            $this->redirect($voltar, 'Os campos de senha não podem ser diferentes!', 'danger');
         }
 
-
-
-        $where = "usuarios_reset_hash ='$token'
-         AND usuarios_expira_em > NOW()";
-
-
-
-
-        $usuario = $this->usuarios->select(null, $where)->fetch(PDO::FETCH_OBJ);
-
-        if (!$usuario) {
-            $_SESSION['msg'] = [
-                'texto' => "Token expirado!",
-                'color' => 'danger',
-            ];
-
-            return $this->redirect(base_url('login'));
+        if ($erro = Validacao::senha($senha)) {
+            $this->redirect($voltar, $erro, 'danger');
         }
 
+        $usuario = $this->usuarios->buscarPorTokenReset(hash('sha256', $token));
 
-        $values = [
-            'usuarios_senha' => password_hash($senha, PASSWORD_DEFAULT),
-
-            'usuarios_reset_hash' => null,
-            'usuarios_expira_em' => null,
-        ];
-
-
-        $whereUpdate = "usuarios_id ='$usuario->usuarios_id'";
-
-        if (!$this->usuarios->update($whereUpdate, $values)) {
-            $_SESSION['msg'] = [
-                'texto' => "Erro ao alterar senha!",
-                'color' => 'danger',
-            ];
-
-            return $this->loadView('login/alterarSenha', []);
+        if (!$usuario || !hash_equals((string) $usuario->usuarios_reset_hash, hash('sha256', $token))) {
+            $this->redirect(base_url('login'), 'Token expirado!', 'danger');
         }
 
+        $this->usuarios->redefinirSenha((int) $usuario->usuarios_id, password_hash($senha, PASSWORD_DEFAULT));
         unset($_SESSION['token']);
+        Logger::info('Senha redefinida por token', ['alvo' => $usuario->usuarios_id]);
 
-        $_SESSION['msg'] = [
-            'texto' => 'Senha alterada com sucesso!',
-            'color' => 'success',
-        ];
-
-        return $this->redirect(base_url('login'));
+        $this->redirect(base_url('login'), 'Senha alterada com sucesso!');
     }
-
 
     /**
-     * Encerra a sessão
+     * Encerra apenas a sessão. Os dispositivos da bancada NÃO são desligados:
+     * sair do sistema não deve interromper um experimento em andamento.
      */
-    public function logout()
+    public function logout(): void
     {
+        unset($_SESSION['usuarios_logado'], $_SESSION['gravacao_experimento_id']);
+        session_regenerate_id(true);
 
-
-        try {
-
-            $this->flask->toggleDispositivo('api/lampada', 'off');
-            $this->flask->toggleDispositivo('api/cooler', 'off');
-            $this->flask->toggleDispositivo('api/bomba', 'off');
-            $this->flask->toggleDispositivo('api/camera/toggle', 'off');
-            $this->flask->toggleDispositivo('api/camera/gravar', 'off');
-
-            $this->homeController->controladorTomada(1, 'off');
-            $this->homeController->controladorTomada(2, 'off');
-            $this->homeController->controladorTomada(3, 'off');
-            $this->homeController->controladorTomada(4, 'off');
-
-            $this->flask->toggleDispositivo('api/camera/toggle', 'off');
-        } catch (\Exception $e) {
-            error_log($e->getMessage());
-        }
-
-        $_SESSION['msg'] = [
-            'texto' => 'Sessão encerrada com sucesso!',
-            'color' => 'success',
-        ];
-        unset($_SESSION['usuarios_logado']);
-        $this->redirect(base_url('login'));
+        $this->redirect(base_url('login'), 'Sessão encerrada com sucesso!');
     }
 }

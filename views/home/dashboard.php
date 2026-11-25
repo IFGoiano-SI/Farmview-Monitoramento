@@ -1,5 +1,4 @@
-    <?php redirectPages(); ?>
-    <!DOCTYPE html>
+        <!DOCTYPE html>
     <html lang="pt-br">
 
     <head>
@@ -139,7 +138,6 @@
         $foto = $_SESSION['usuarios_logado']->usuarios_imagem;
         $nome = $_SESSION['usuarios_logado']->usuarios_nome;
         $escolaridade = $_SESSION['usuarios_logado']->usuarios_escolaridade;
-        $url_rasp = $_SESSION['url_rasp'];
         ?>
 
         <div class="fullScreen">
@@ -186,10 +184,7 @@
             <div class="contentScreen">
 
                 <div class="alert-container">
-                    <?php if (isset($_SESSION['msg'])): ?>
-                        <?= msg($_SESSION['msg']['texto'], $_SESSION['msg']['color']); ?>
-                        <?php unset($_SESSION['msg']); ?>
-                    <?php endif; ?>
+                    <?php partial('alerts'); ?>
                 </div>
 
                 <!-- ===================== NAVBAR ===================== -->
@@ -203,7 +198,7 @@
 
                         <div class="navLogout">
                             <a href="<?= base_url('experimento/editar/' . $usuarioExperimento->experimentos_id) ?>">
-                                <img id="imagePerson" src="<?= base_url($foto) ?>" alt="Foto de perfil">
+                                <img id="imagePerson" src="<?= esc(base_url($foto)) ?>" alt="Foto de perfil">
                             </a>
 
 
@@ -214,32 +209,15 @@
                     </div>
 
 
-                    <div class="modal fade" id="meuModalSair" tabindex="-1">
-                        <div class="modal-dialog modal-dialog-centered modal-md">
-                            <div class="modal-content">
-
-                                <div class="modal-header">
-                                    <h5 class="modal-title" style="text-align: center !important; font-size: x-large;"></h5>
-                                </div>
-
-                                <div class="modal-body">
-                                    <form action="<?= base_url('login/logout') ?>" method="post">
-                                        <h4 class="text-center mt-4 mb-5">Deseja sair da sua conta?</h4>
-                                        <p class="text-center">
-                                            <button type="button" class="btn-voltar" data-bs-dismiss="modal">Voltar</button>
-                                            <button type="submit" class="btn-finalizar" data-bs-dismiss="modal"
-                                                data-bs-toggle="modal" data-bs-target="#modal2">Sair</button>
-                                        </p>
-                                    </form>
-                                </div>
-
-                                <div class="modal-footer"></div>
-
-                            </div>
-                        </div>
-                    </div>
+                    <?php partial('logout_modal'); ?>
 
                 <?php endif; ?>
+
+                <div id="avisoBancada" class="alert alert-warning mx-4 mt-3 <?= $online ? 'd-none' : '' ?>" role="status" aria-live="polite">
+                    <i class="bi bi-wifi-off" aria-hidden="true"></i>
+                    <strong>Sem comunicação com a bancada.</strong>
+                    <span id="avisoBancadaTexto">Os valores exibidos podem estar desatualizados.</span>
+                </div>
 
                 <!-- ===================== ÁREA SUPERIOR ===================== -->
                 <div class="Finalizacao">
@@ -268,7 +246,7 @@
 
                                 <div class="valorAtual">
                                     <span>Atual</span>
-                                    <strong id="temperaturaTela">28,3°C</strong>
+                                    <strong id="temperaturaTela" title="Sensor de temperatura ainda não integrado">--</strong>
                                 </div>
                             </div>
                         </div>
@@ -296,7 +274,7 @@
 
                                 <div class="valorAtual">
                                     <span>Atual</span>
-                                    <strong id="temperaturaCultivo">25,7°C</strong>
+                                    <strong id="temperaturaCultivo" title="Sensor de temperatura ainda não integrado">--</strong>
                                 </div>
                             </div>
                         </div>
@@ -318,12 +296,16 @@
                         <h4><i class="bi bi-camera"></i> Câmera ao vivo</h4>
 
                         <form id="formCamera" action="<?= base_url('home/ligarcamera') ?>" method="post">
+<?= csrf_field() ?>
                             <div class="cam">
                                 <img id="camera"
-                                    src="http://<?= $_SESSION['url_rasp'] ?>/video_feed"
-                                    alt="Câmera indisponível"
+                                    src="<?= esc($videoUrl) ?>"
+                                    alt="Imagem ao vivo da bancada (clique para ampliar)"
                                     title="Clique para ampliar"
-                                    onclick="abrirCamera()">
+                                    role="button"
+                                    tabindex="0"
+                                    onclick="abrirCamera()"
+                                    onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); abrirCamera(); }">
                             </div>
 
                             <dialog id="modalCamera">
@@ -339,6 +321,7 @@
 
                         <div class="buttonCam">
                             <form id="formGravacao">
+                                <?= csrf_field() ?>
                                 <input type="hidden" name="experimentos_id"
                                     value="<?= (int) $usuarioExperimento->experimentos_id ?>">
 
@@ -373,6 +356,7 @@
 
                             <!-- TOMADA 1 -->
                             <form class="groupSensores" action="<?= base_url('home/toggleDispositivo') ?>" method="post">
+<?= csrf_field() ?>
                                 <input type="hidden" name="tomada" value="1">
 
                                 <div class="infoSensores">
@@ -384,8 +368,8 @@
                                         <h4>Tomada 1</h4>
                                         <p>
                                             Status:
-                                            <span class="<?= ($_SESSION['tomada_1'] ?? '') === 'Ligado' ? 'statusLigado' : 'statusDesligado' ?>">
-                                                <?= ($_SESSION['tomada_1'] ?? '') === 'Ligado' ? 'Ligado' : 'Desligado' ?>
+                                            <span id="statusTomada1" class="<?= ($tomadas[1] ?? null) === true ? 'statusLigado' : 'statusDesligado' ?>">
+                                                <?= ($tomadas[1] ?? null) === null ? 'Indisponível' : (($tomadas[1]) ? 'Ligado' : 'Desligado') ?>
                                             </span>
                                         </p>
                                     </div>
@@ -404,7 +388,9 @@
                                             name="acao"
                                             value="on"
                                             onchange="this.form.submit()"
-                                            <?= ($_SESSION['tomada_1'] ?? '') === 'Ligado' ? 'checked' : '' ?>>
+                                            aria-label="Ligar ou desligar a tomada 1"
+                                            <?= ($tomadas[1] ?? null) === true ? 'checked' : '' ?>
+                                            <?= ($tomadas[1] ?? null) === null ? 'disabled' : '' ?>>
 
 
                                     </div>
@@ -413,7 +399,7 @@
 
                             <!-- TOMADA 2 -->
                             <form class="groupSensores" action="<?= base_url('home/toggleDispositivo') ?>" method="post">
-                                <input type="hidden" name="rota" value="api/bomba">
+<?= csrf_field() ?>
                                 <input type="hidden" name="tomada" value="2">
 
                                 <div class="infoSensores">
@@ -425,8 +411,8 @@
                                         <h4>Tomada 2</h4>
                                         <p>
                                             Status:
-                                            <span class="<?= ($_SESSION['tomada_2'] ?? '') === 'Ligado' ? 'statusLigado' : 'statusDesligado' ?>">
-                                                <?= ($_SESSION['tomada_2'] ?? '') === 'Ligado' ? 'Ligado' : 'Desligado' ?>
+                                            <span id="statusTomada2" class="<?= ($tomadas[2] ?? null) === true ? 'statusLigado' : 'statusDesligado' ?>">
+                                                <?= ($tomadas[2] ?? null) === null ? 'Indisponível' : (($tomadas[2]) ? 'Ligado' : 'Desligado') ?>
                                             </span>
                                         </p>
                                     </div>
@@ -445,7 +431,9 @@
                                             name="acao"
                                             value="on"
                                             onchange="this.form.submit()"
-                                            <?= ($_SESSION['tomada_2'] ?? '') === 'Ligado' ? 'checked' : '' ?>>
+                                            aria-label="Ligar ou desligar a tomada 2"
+                                            <?= ($tomadas[2] ?? null) === true ? 'checked' : '' ?>
+                                            <?= ($tomadas[2] ?? null) === null ? 'disabled' : '' ?>>
 
                                     </div>
                                 </div>
@@ -453,7 +441,7 @@
 
                             <!-- TOMADA 3 -->
                             <form class="groupSensores" action="<?= base_url('home/toggleDispositivo') ?>" method="post">
-                                <input type="hidden" name="rota" value="api/lampada">
+<?= csrf_field() ?>
                                 <input type="hidden" name="tomada" value="3">
 
                                 <div class="infoSensores">
@@ -465,8 +453,8 @@
                                         <h4>Tomada 3</h4>
                                         <p>
                                             Status:
-                                            <span class="<?= ($_SESSION['tomada_3'] ?? '') === 'Ligado' ? 'statusLigado' : 'statusDesligado' ?>">
-                                                <?= ($_SESSION['tomada_3'] ?? '') === 'Ligado' ? 'Ligado' : 'Desligado' ?>
+                                            <span id="statusTomada3" class="<?= ($tomadas[3] ?? null) === true ? 'statusLigado' : 'statusDesligado' ?>">
+                                                <?= ($tomadas[3] ?? null) === null ? 'Indisponível' : (($tomadas[3]) ? 'Ligado' : 'Desligado') ?>
                                             </span>
                                         </p>
                                     </div>
@@ -483,7 +471,9 @@
                                             name="acao"
                                             value="on"
                                             onchange="this.form.submit()"
-                                            <?= ($_SESSION['tomada_3'] ?? '') === 'Ligado' ? 'checked' : '' ?>>
+                                            aria-label="Ligar ou desligar a tomada 3"
+                                            <?= ($tomadas[3] ?? null) === true ? 'checked' : '' ?>
+                                            <?= ($tomadas[3] ?? null) === null ? 'disabled' : '' ?>>
                                     </div>
                                 </div>
                             </form>
@@ -491,7 +481,7 @@
                             <!-- Tomada 4 -->
 
                             <form class="groupSensores" action="<?= base_url('home/toggleDispositivo') ?>" method="post">
-                                <input type="hidden" name="rota" value="api/lampada">
+<?= csrf_field() ?>
                                 <input type="hidden" name="tomada" value="4">
 
                                 <div class="infoSensores">
@@ -503,8 +493,8 @@
                                         <h4>Tomada 4</h4>
                                         <p>
                                             Status:
-                                            <span class="<?= ($_SESSION['tomada_4'] ?? '') === 'Ligado' ? 'statusLigado' : 'statusDesligado' ?>">
-                                                <?= ($_SESSION['tomada_4'] ?? '') === 'Ligado' ? 'Ligado' : 'Desligado' ?>
+                                            <span id="statusTomada4" class="<?= ($tomadas[4] ?? null) === true ? 'statusLigado' : 'statusDesligado' ?>">
+                                                <?= ($tomadas[4] ?? null) === null ? 'Indisponível' : (($tomadas[4]) ? 'Ligado' : 'Desligado') ?>
                                             </span>
                                         </p>
                                     </div>
@@ -523,7 +513,9 @@
                                             name="acao"
                                             value="on"
                                             onchange="this.form.submit()"
-                                            <?= ($_SESSION['tomada_4'] ?? '') === 'Ligado' ? 'checked' : '' ?>>
+                                            aria-label="Ligar ou desligar a tomada 4"
+                                            <?= ($tomadas[4] ?? null) === true ? 'checked' : '' ?>
+                                            <?= ($tomadas[4] ?? null) === null ? 'disabled' : '' ?>>
 
                                     </div>
                                 </div>
@@ -532,7 +524,7 @@
                         </div>
 
                         <!-- Sensores de umidade separados das tomadas -->
-                        <div class="groupUmidade">
+                        <div class="groupUmidade" aria-live="polite">
 
                             <?php
                             $percentuais = $sensores['pct'] ?? [];
@@ -550,9 +542,9 @@
                                     ? (float) $tensoes[$i]
                                     : 0;
 
-                                if ($pct < 35) {
+                                if ($pct < $limites['baixa']) {
                                     $statusSensor = 'Baixa';
-                                } elseif ($pct < 70) {
+                                } elseif ($pct < $limites['alta']) {
                                     $statusSensor = 'Ideal';
                                 } else {
                                     $statusSensor = 'Alta';
@@ -642,11 +634,10 @@
 
                         <div class="botoes-experimentos">
                             <button class="btn-voltar" data-bs-dismiss="modal">Sair</button>
-                            <button type="submit"
-                                onclick="window.location.href='<?= base_url('experimento/finalizarExperimento/' . $usuarioExperimento->experimentos_id) ?>'"
-                                class="btn-finalizar">
-                                Finalizar
-                            </button>
+                            <form action="<?= base_url('experimento/finalizarExperimento/' . (int) $usuarioExperimento->experimentos_id) ?>" method="post" class="d-inline">
+                                <?= csrf_field() ?>
+                                <button type="submit" class="btn-finalizar">Finalizar</button>
+                            </form>
                         </div>
                     </div>
 
@@ -654,48 +645,16 @@
             </div>
         </div>
 
-        <!-- ===================== FOOTER ===================== -->
-        <footer class="contentFooter" style="height: auto;">
-
-            <div class="footerMain">
-                <div class="aboutFooter">
-                    <h4>FarmView</h4>
-                    <p>
-                        Plataforma de monitoramento em ambientes controlados
-                    </p>
-                </div>
-                <div class="linkFooter">
-                    <h5>Parceiros</h5>
-
-                    <ul>
-                        <li><a href="https://cebiobrasil.com.br/" target="_blank">CEBIO</a></li>
-                        <li>
-                            <a href="https://www.ifgoiano.edu.br/home/index.php/ceres" target="_blank">
-                                IF Goiano Campus Ceres
-                            </a>
-                        </li>
-                        <li><a href="https://goias.gov.br/fapeg/" target="_blank">FAPEG</a></li>
-                        <li><a href="https://lattes.cnpq.br/" target="_blank">CNPq</a></li>
-                        <li><a href="#">LabTI</a></li>
-                    </ul>
-                </div>
-
-            </div>
-
-            <div class="footerBottom">
-                <p>© 2026 FarmView</p>
-                <p>IF Goiano — Campus Ceres</p>
-            </div>
-
-        </footer>
+        <?php partial('footer', ['estilo' => 'height: auto;']); ?>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
             integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
             crossorigin="anonymous"></script>
 
         <script>
-            const BASE_URL = "<?= base_url() ?>";
-            const RASP_URL = "http://<?= $_SESSION['url_rasp'] ?>";
+            const BASE_URL = <?= json_encode(base_url()) ?>;
+            window.CSRF_TOKEN = <?= json_encode(csrf_token()) ?>;
+            window.LIMITES_UMIDADE = <?= json_encode($limites) ?>;
         </script>
 
         <script>

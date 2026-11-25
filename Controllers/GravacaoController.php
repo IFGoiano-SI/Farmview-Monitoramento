@@ -2,115 +2,105 @@
 
 namespace Controllers;
 
-use DateTime;
-use Models\Database as Conexao;
-use \PDO;
-use Ultis\RenderView;
-use \Ultis\FlaskService;
+use Models\VideoModel;
+use Services\Logger;
 
-class GravacaoController extends RenderView
+class GravacaoController extends BaseController
 {
-
-    private $gravacao;
-
+    private VideoModel $videos;
 
     public function __construct()
     {
-        $this->gravacao = new Conexao('videos_experimentos');
+        $this->videos = new VideoModel();
     }
 
-    protected function redirect($path, $mensagem = null)
+    /** Vídeos ficam fora da pasta pública e só são entregues ao dono. */
+    public static function pastaVideos(): string
     {
-        if ($mensagem) {
-            $_SESSION['msg'] = $mensagem;
+        return dirname(__DIR__) . '/storage/videos/';
+    }
+
+    public function index(): void
+    {
+        $this->loadView('home/gravacao', [
+            'dadosVideo' => $this->videos->ativosDoUsuario($this->usuarioId()),
+        ]);
+    }
+
+    public function download(string $id): void
+    {
+        $video = $this->videos->doUsuario($this->idDaUrlOu400($id), $this->usuarioId());
+        $arquivo = $video ? self::arquivoDoVideo($video->path_video) : null;
+
+        if (!$arquivo) {
+            $this->redirect(base_url('gravacao/index'), 'Arquivo nao encontrado!', 'danger');
         }
-        header("Location: {$path}");
-        exit();
+
+        session_write_close();
+
+        $tipo = str_ends_with($arquivo, '.avi') ? 'video/x-msvideo' : 'video/mp4';
+        header('Content-Type: ' . $tipo);
+        header('Content-Length: ' . filesize($arquivo));
+        header('Content-Disposition: attachment; filename="' . basename($arquivo) . '"');
+        header('Cache-Control: private, no-store');
+        readfile($arquivo);
+        exit;
     }
 
-
-
-
-
-    public function index()
+    public function deletarGravacao(): void
     {
+        $videoId = (int) ($_POST['videos_id'] ?? 0);
+        $video = $this->videos->doUsuario($videoId, $this->usuarioId());
 
-        $usuario_id = $_SESSION['usuarios_logado']->usuarios_id ?? null;
+        if (!$video) {
+            $this->redirect(base_url('gravacao/index'), 'Arquivo nao encontrado!', 'danger');
+        }
 
+        $this->videos->desativar($videoId);
+        $this->removerArquivo($video->path_video);
 
-        $join = "usuarios u on u.usuarios_id = videos_experimentos.usuarios_id INNER JOIN experimentos e on e.experimentos_id = videos_experimentos.experimentos_id";
-
-
-
-        $where = "u.usuarios_id = '$usuario_id' AND videos_status = 'Ativo'";
-        $orderBy = "videos_experimentos.criado_em ASC";
-        $dadosGravacao = $this->gravacao->select($join, $where, $orderBy)->fetchAll(PDO::FETCH_OBJ);
-
-
-        $data['dadosVideo'] = $dadosGravacao ?? '';
-
-
-
-        return $this->loadView('home/gravacao', $data);
+        $this->redirect(base_url('gravacao/index'), 'Arquivo deletado com sucesso!');
     }
 
-    public function deletarGravacao()
+    public function deletarTodasGravacao(): void
     {
-        $videoDeletado = $_POST['videos_id'];
+        $videos = $this->videos->ativosDoUsuario($this->usuarioId());
 
+        foreach ($videos as $video) {
+            $this->videos->desativar((int) $video->videos_id);
+            $this->removerArquivo($video->path_video);
+        }
 
-        $caminhoVideo = $_POST['path_video'];
+        $this->redirect(base_url('gravacao/index'), 'Todos os videos foram deletados com sucesso!');
+    }
 
-        if (file_exists($caminhoVideo)) {
-            if (unlink($caminhoVideo)) {
-                $_SESSION['msg'] = [
-                    'texto' => "Arquivo deletado com sucesso!",
-                    'color' => 'success',
-                ];
+    /**
+     * Resolve o arquivo a partir do nome salvo no banco, procurando apenas nas
+     * pastas de vídeo conhecidas (inclui a pasta antiga Public/UploadsVideos).
+     */
+    public static function arquivoDoVideo(string $caminhoBanco): ?string
+    {
+        $nome = basename($caminhoBanco);
 
-                $this->redirect(base_url('gravacao/index'));
-            } else {
-                $_SESSION['msg'] = [
-                    'texto' => "Erro ao deletar video: $videoDeletado!",
-                    'color' => 'danger',
-                ];
+        if (!preg_match('/^[\w.-]+\.(mp4|avi)$/', $nome)) {
+            return null;
+        }
 
-                $this->redirect(base_url('gravacao/index'));
+        foreach ([self::pastaVideos(), dirname(__DIR__) . '/Public/UploadsVideos/'] as $pasta) {
+            if (is_file($pasta . $nome)) {
+                return $pasta . $nome;
             }
-        } else {
-            $_SESSION['msg'] = [
-                'texto' => "Arquivo nao encontrado!",
-                'color' => 'danger',
-            ];
         }
 
-
-        $this->redirect(base_url('gravacao/index'));
+        return null;
     }
 
-    public function deletarTodasGravacao()
+    private function removerArquivo(string $caminhoBanco): void
     {
-        $videoUsuarioDeletado = $_POST['usuarios_id'];
+        $arquivo = self::arquivoDoVideo($caminhoBanco);
 
-        $valueASerDeletado = [
-            'videos_status' => 'Desativado',
-            'deletado_em' => date('Y-m-d H:i:s'),
-        ];
-
-        $where = "usuarios_id = $videoUsuarioDeletado";
-
-        if ($this->gravacao->update($where, $valueASerDeletado)) {
-            $_SESSION['msg'] = [
-                'texto' => "Todos os videos foram deletados com sucesso!",
-                'color' => 'success',
-            ];
-        } else {
-            $_SESSION['msg'] = [
-                'texto' => "Erro ao deletar os vídeos!",
-                'color' => 'danger',
-            ];
+        if ($arquivo && !@unlink($arquivo)) {
+            Logger::aviso('Não foi possível remover o arquivo de vídeo', ['arquivo' => $arquivo]);
         }
-
-        $this->redirect(base_url('gravacao/index'));
     }
 }

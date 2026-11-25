@@ -1,4 +1,3 @@
-<?php redirectPages(); ?>
 
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -66,10 +65,7 @@
             <div class="contentScreen">
 
                 <div class="alert-container" style="z-index: 9999999999999999999999;">
-                    <?php if (isset($_SESSION['msg'])): ?>
-                        <?= msg($_SESSION['msg']['texto'], $_SESSION['msg']['color']); ?>
-                        <?php unset($_SESSION['msg']); ?>
-                    <?php endif; ?>
+                    <?php partial('alerts'); ?>
                 </div>
 
                 <div class="navBar">
@@ -80,47 +76,19 @@
                     </div>
 
                     <div class="navLogout">
-                        <a href="#"><img id="imagePerson" src="<?= base_url($foto) ?>" alt="Foto de perfil"></a>
+                        <a href="#"><img id="imagePerson" src="<?= esc(base_url($foto)) ?>" alt="Foto de perfil"></a>
 
                         <button type="button" class="btn-logout" data-bs-toggle="modal" data-bs-target="#meuModalSair">
                             Sair <i class="bi bi-box-arrow-right"></i>
                         </button>
 
-                        <!-- MODAL DE LOGOUT -->
-                        <div class="modal fade" id="meuModalSair" tabindex="-1">
-                            <div class="modal-dialog modal-dialog-centered modal-md">
-                                <div class="modal-content">
-
-                                    <div class="modal-header">
-                                        <h5 class="modal-title" style="text-align: center !important; font-size: x-large;"></h5>
-                                    </div>
-
-                                    <div class="modal-body">
-                                        <form action="<?= base_url('login/logout') ?>" method="post">
-                                            <h4 class="text-center mt-4 mb-5">Deseja sair da sua conta?</h4>
-
-                                            <p class="text-center">
-                                                <button type="button" class="btn-voltar" data-bs-dismiss="modal">
-                                                    Voltar
-                                                </button>
-
-                                                <button type="submit" class="btn-finalizar">
-                                                    Sair
-                                                </button>
-                                            </p>
-                                        </form>
-                                    </div>
-
-                                    <div class="modal-footer"></div>
-
-                                </div>
-                            </div>
-                        </div>
+                        <?php partial('logout_modal'); ?>
 
                     </div>
                 </div>
 
                 <form action="<?= base_url('experimento/cadastrar') ?>" method="post" enctype="multipart/form-data">
+<?= csrf_field() ?>
 
                     <div class="mainTela">
                         <button type="button" class="newExperimento" data-bs-toggle="modal" data-bs-target="#meuModal">
@@ -147,7 +115,7 @@
                                             <label for="titulo">Título do experimento</label>
                                             <input type="text" name="experimentos_titulo" class="form-control" id="titulo"
                                                 placeholder="Informe o nome do experimento"
-                                                value="<?= $_POST['experimentos_titulo'] ?? '' ?>" required>
+                                                value="<?= esc(old('experimentos_titulo')) ?>" required>
                                             <span class="alertSpan" id="textoObrigatorio"></span>
                                         </div>
 
@@ -155,28 +123,28 @@
                                             <label for="sala">Sala do experimento</label>
                                             <input type="text" name="experimentos_sala" class="form-control" id="sala"
                                                 placeholder="Informe a sala do experimento"
-                                                value="<?= $_POST['experimentos_sala'] ?? '' ?>" required>
+                                                value="<?= esc(old('experimentos_sala')) ?>" required>
                                             <span class="alertSpan" id="textoObrigatorio"></span>
                                         </div>
 
                                         <div class="col-md-6 mb-4">
                                             <label for="inicio">Data de início</label>
                                             <input type="date" name="experimentos_inicio" class="form-control" id="inicio"
-                                                value="<?= $_POST['experimentos_inicio'] ?? '' ?>" required>
+                                                value="<?= esc(old('experimentos_inicio')) ?>" required>
                                             <span class="alertSpan" id="textoObrigatorio"></span>
                                         </div>
 
                                         <div class="col-md-6 mb-4">
                                             <label for="final">Data final</label>
                                             <input type="date" name="experimentos_final" class="form-control" id="final"
-                                                value="<?= $_POST['experimentos_final'] ?? '' ?>" required>
+                                                value="<?= esc(old('experimentos_final')) ?>" required>
                                             <span class="alertSpan" id="textoObrigatorio"></span>
                                         </div>
 
                                         <div class="col-md-12 mb-4">
                                             <label for="participantes_externos">Estudantes participantes</label>
                                             <textarea name="participantes_externos" id="participantes_externos" class="form-control"
-                                                placeholder="Informe o nome dos participantes" rows="5"><?= $_POST['participantes_externos'] ?? '' ?></textarea>
+                                                placeholder="Informe o nome dos participantes" rows="5"><?= esc(old('participantes_externos')) ?></textarea>
                                         </div>
 
                                     </div>
@@ -210,7 +178,7 @@
                                             <label for="tipoPlantacao">Tipo de plantação</label>
                                             <input type="text" name="bancadas_tipo_plantacao" class="form-control" id="tipoPlantacao"
                                                 placeholder="Informe o tipo de plantação"
-                                                value="<?= $_POST['bancadas_tipo_plantacao'] ?? '' ?>" required>
+                                                value="<?= esc(old('bancadas_tipo_plantacao')) ?>" required>
                                             <span class="alertSpan" id="textoObrigatorio"></span>
                                         </div>
 
@@ -218,15 +186,15 @@
                                             <label for="nomeCientifico">Nome científico</label>
                                             <input type="text" name="bancadas_nome_cientifico" class="form-control" id="nomeCientifico"
                                                 placeholder="Nome científico da plantação"
-                                                value="<?= $_POST['bancadas_nome_cientifico'] ?? '' ?>" required>
+                                                value="<?= esc(old('bancadas_nome_cientifico')) ?>" required>
                                             <span class="alertSpan" id="textoObrigatorio"></span>
                                         </div>
 
                                         <div class="col-md-6 mb-4">
                                             <label for="quantidade">Quantidade</label>
-                                            <input type="number" name="bancadas_quantidade" class="form-control" id="quantidade"
+                                            <input type="number" min="1" max="99" name="bancadas_quantidade" class="form-control" id="quantidade"
                                                 placeholder="Informe a quantidade de planta"
-                                                value="<?= $_POST['bancadas_quantidade'] ?? '' ?>" required>
+                                                value="<?= esc(old('bancadas_quantidade')) ?>" required>
                                             <span class="alertSpan" id="textoObrigatorio"></span>
                                         </div>
 
@@ -234,13 +202,13 @@
                                             <label for="nome">Nome da bancada</label>
                                             <input type="text" name="bancadas_nome" class="form-control" id="nome"
                                                 placeholder="Informe o nome da bancada"
-                                                value="<?= $_POST['bancadas_nome'] ?? '' ?>" required>
+                                                value="<?= esc(old('bancadas_nome')) ?>" required>
                                             <span class="alertSpan" id="textoObrigatorio"></span>
                                         </div>
 
                                         <div class="col-md-6 mb-4">
                                             <label for="experimentos_imagem">Anexe uma imagem para o experimento</label>
-                                            <input type="file" name="experimentos_imagem" class="form-control" required id="experimentos_imagem">
+                                            <input type="file" name="experimentos_imagem" class="form-control" required id="experimentos_imagem" accept="image/png, image/jpeg">
                                             <span class="alertSpan" id="textoObrigatorio"></span>
                                         </div>
 
@@ -248,10 +216,10 @@
                                             <label for="participantes_orientador">Orientador dos participante(s)</label>
                                             <select name="participantes_orientador" required class="form-control" id="participantes_orientador">
                                                 <option value="" selected disabled>Selecione um orientador</option>
-                                                <option value="Vilson Soares">Vilson Soares</option>
-                                                <option value="Henrique">Henrique</option>
-                                                <option value="Flávia">Flávia</option>
-                                                <option value="Ana Paula">Ana Paula</option>
+                                                <option value="Vilson Soares" <?= old('participantes_orientador') === 'Vilson Soares' ? 'selected' : '' ?>>Vilson Soares</option>
+                                                <option value="Henrique" <?= old('participantes_orientador') === 'Henrique' ? 'selected' : '' ?>>Henrique</option>
+                                                <option value="Flávia" <?= old('participantes_orientador') === 'Flávia' ? 'selected' : '' ?>>Flávia</option>
+                                                <option value="Ana Paula" <?= old('participantes_orientador') === 'Ana Paula' ? 'selected' : '' ?>>Ana Paula</option>
                                             </select>
                                             <span class="alertSpan" id="textoObrigatorio"></span>
                                         </div>
@@ -260,22 +228,22 @@
                                             <label class="mb-2">Luzes da bancada</label>
 
                                             <div class="form-check">
-                                                <input type="checkbox" class="form-check-input" name="bancadas_luzes[]" value="RGW" id="rgw">
+                                                <input type="checkbox" class="form-check-input" name="bancadas_luzes[]" value="RGW" <?= in_array('RGW', (array) old('bancadas_luzes', []), true) ? 'checked' : '' ?> id="rgw">
                                                 <label class="form-check-label" for="rgw">Luzes RGW</label>
                                             </div>
 
                                             <div class="form-check">
-                                                <input type="checkbox" class="form-check-input" name="bancadas_luzes[]" value="Branca" id="white">
+                                                <input type="checkbox" class="form-check-input" name="bancadas_luzes[]" value="Branca" <?= in_array('Branca', (array) old('bancadas_luzes', []), true) ? 'checked' : '' ?> id="white">
                                                 <label class="form-check-label" for="white">Luzes White</label>
                                             </div>
 
                                             <div class="form-check">
-                                                <input type="checkbox" class="form-check-input" name="bancadas_luzes[]" value="Vermelha" id="red">
+                                                <input type="checkbox" class="form-check-input" name="bancadas_luzes[]" value="Vermelha" <?= in_array('Vermelha', (array) old('bancadas_luzes', []), true) ? 'checked' : '' ?> id="red">
                                                 <label class="form-check-label" for="red">Luzes Red</label>
                                             </div>
 
                                             <div class="form-check mb-5">
-                                                <input type="checkbox" class="form-check-input" name="bancadas_luzes[]" value="Azul" id="blue">
+                                                <input type="checkbox" class="form-check-input" name="bancadas_luzes[]" value="Azul" <?= in_array('Azul', (array) old('bancadas_luzes', []), true) ? 'checked' : '' ?> id="blue">
                                                 <label class="form-check-label" for="blue">Luzes Blue</label>
                                             </div>
                                         </div>
@@ -299,44 +267,19 @@
         </div>
     <?php endif; ?>
 
-   <footer class="contentFooter">
-
-        <div class="footerMain">
-            <div class="aboutFooter">
-                <h4>FarmView</h4>
-                <p>
-                    Plataforma de monitoramento em ambientes controlados
-                </p>
-            </div>
-            <div class="linkFooter">
-                <h5>Parceiros</h5>
-
-                <ul>
-                    <li><a href="https://cebiobrasil.com.br/" target="_blank">CEBIO</a></li>
-                    <li>
-                        <a href="https://www.ifgoiano.edu.br/home/index.php/ceres" target="_blank">
-                            IF Goiano Campus Ceres
-                        </a>
-                    </li>
-                    <li><a href="https://goias.gov.br/fapeg/" target="_blank">FAPEG</a></li>
-                    <li><a href="https://lattes.cnpq.br/" target="_blank">CNPq</a></li>
-                    <li><a href="#">LabTI</a></li>
-                </ul>
-            </div>
-
-        </div>
-
-        <div class="footerBottom">
-            <p>© 2026 FarmView</p>
-            <p>IF Goiano — Campus Ceres</p>
-        </div>
-
-    </footer>
+   <?php partial('footer'); ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
         crossorigin="anonymous"></script>
     <script src="<?= base_url('Public/Js/javascript.js') ?>"></script>
+
+    <?php if (!empty($_SESSION['old'])): ?>
+        <script>
+            // Volta com o formulário aberto e preenchido após um erro de validação.
+            new bootstrap.Modal(document.getElementById('meuModal')).show();
+        </script>
+    <?php endif; ?>
 
     <script>
         const campos = document.querySelectorAll("input[required]");

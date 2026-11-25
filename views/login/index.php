@@ -22,15 +22,13 @@
 
 
     <div class="alert-container">
-        <?php if (isset($_SESSION['msg'])): ?>
-            <?= msg($_SESSION['msg']['texto'], $_SESSION['msg']['color']); ?>
-            <?php unset($_SESSION['msg']); ?>
-        <?php endif; ?>
+        <?php partial('alerts'); ?>
     </div>
 
     <img src="<?= base_url('Public/templates/ImageSistema/verticalFarming.png') ?>" class="imgFundo" alt="sem image">
 
     <form action="<?= base_url('login/autenticar') ?>" method="post">
+<?= csrf_field() ?>
         <div class="loginCadastro">
             <div class="caixaLogin">
                 <div class="boaVinda">
@@ -40,13 +38,13 @@
 
                 <div class="campos">
                     <input type="email" name="usuarios_email" class="form-control" style="padding: 1rem;"
-                        placeholder="Informe seu email" id="usuarios_email" value="<?= $_SESSION['old']['usuarios_email'] ?? '' ?>">
+                        placeholder="Informe seu email" id="usuarios_email" value="<?= esc(old('usuarios_email')) ?>" autocomplete="username" aria-label="Email">
                     <!-- <span class="textoObrigatorio"> Teste</span> -->
                 </div>
 
                 <div class="campos">
                     <input type="password" name="usuarios_senha" class="form-control" style="padding: 1rem;"
-                        placeholder="Informe sua senha" id="usuarios_senha">
+                        placeholder="Informe sua senha" id="usuarios_senha" autocomplete="current-password" aria-label="Senha">
                     <!-- <span class="textoObrigatorio"> Teste</span> -->
 
                 </div>
@@ -62,11 +60,8 @@
 
             </div>
         </div>
+    </form>
 
-        </div>
-        </div>
-
-        <?php unset($_SESSION['old']); ?>
 
 
 

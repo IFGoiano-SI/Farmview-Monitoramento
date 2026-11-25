@@ -1,4 +1,3 @@
-<?php redirectPages(); ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 
@@ -127,10 +126,7 @@
         <div class="contentScreen">
 
             <div class="alert-container">
-                <?php if (isset($_SESSION['msg'])): ?>
-                    <?= msg($_SESSION['msg']['texto'], $_SESSION['msg']['color']); ?>
-                    <?php unset($_SESSION['msg']); ?>
-                <?php endif; ?>
+                <?php partial('alerts'); ?>
             </div>
 
             <?php if (isset($_SESSION['usuarios_logado'])): ?>
@@ -144,7 +140,7 @@
 
                     <div class="navLogout">
                         <a href="#">
-                            <img id="imagePerson" src="<?= base_url($foto) ?>" alt="Foto de perfil">
+                            <img id="imagePerson" src="<?= esc(base_url($foto)) ?>" alt="Foto de perfil">
                         </a>
 
                         <button type="button" class="btn-logout" data-bs-toggle="modal" data-bs-target="#meuModalSair">
@@ -154,31 +150,7 @@
 
                 </div>
 
-                <!-- Modal de logout -->
-                <div class="modal fade" id="meuModalSair" tabindex="-1">
-                    <div class="modal-dialog modal-dialog-centered modal-md">
-                        <div class="modal-content">
-
-                            <div class="modal-header">
-                                <h5 class="modal-title" style="text-align: center !important; font-size: x-large;"></h5>
-                            </div>
-
-                            <div class="modal-body">
-                                <form action="<?= base_url('login/logout') ?>" method="post">
-                                    <h4 class="text-center mt-4 mb-5">Deseja sair da sua conta?</h4>
-                                    <p class="text-center">
-                                        <button type="button" class="btn-voltar" data-bs-dismiss="modal">Voltar</button>
-                                        <button type="submit" class="btn-finalizar" data-bs-dismiss="modal"
-                                            data-bs-toggle="modal" data-bs-target="#modal2">Sair</button>
-                                    </p>
-                                </form>
-                            </div>
-
-                            <div class="modal-footer"></div>
-
-                        </div>
-                    </div>
-                </div>
+                <?php partial('logout_modal'); ?>
 
             <?php endif; ?>
 
@@ -192,10 +164,7 @@
                     </div>
 
                     <?php
-                    $videosAtivos = array_values(array_filter(
-                        $dadosVideo,
-                        fn($video) => $video->videos_status === 'Ativo'
-                    ));
+                    $videosAtivos = array_values($dadosVideo);
 
                     $totalRegistros = count($videosAtivos);
                     $temVideoAtivo = $totalRegistros > 0;
@@ -213,7 +182,6 @@
 
                     <?php if ($temVideoAtivo): ?>
                         <div class="buttonLimparTabela">
-                            <input type="hidden" name="deletado_em" value="<?= $_SESSION['usuarios_logado']->usuarios_id ?>">
                             <button type="submit" class="btnLimparTabela" data-bs-toggle="modal" data-bs-target="#limparRegistro"> Limpar registros</button>
                         </div>
 
@@ -227,6 +195,7 @@
 
                                     <div class="modal-body">
                                         <form action="<?= base_url('gravacao/deletarAll') ?>" method="post">
+<?= csrf_field() ?>
                                             <h4 class="text-center mt-2">Deseja deletar todos os vídeos da lista?</h4>
                                             <p class="text-center mb-3">Ao deletar os vídeos, você não terá mais acesso a eles, tem certeza?</p>
                                             <div style="display: flex; justify-content:center; gap: 10px;">
@@ -234,7 +203,6 @@
                                                     type="button" data-bs-dismiss="modal" class="btn btn-danger mt-3" style="width: 100px; "> Não</button>
 
                                                 <button type="submit" class="btn btn-success mt-3" style="width: 100px;">Sim</button>
-                                                <input type="hidden" name="usuarios_id" value="<?= $_SESSION['usuarios_logado']->usuarios_id ?>">
                                             </div>
                                         </form>
                                     </div>
@@ -277,12 +245,12 @@
                                     <tr>
                                         <th scope="row"> #0<?= esc($video->videos_id) ?></th>
                                         <td><?= esc(mb_strimwidth($video->experimentos_titulo, 0, '50', '...')) ?></td>
-                                        <td><?= esc($video->path_video) ?></td>
+                                        <td><?= esc(basename($video->path_video)) ?></td>
                                         <td><?= esc($video->duracao_segundos) ?> segundo(s)</td>
                                         <td><?= number_format($video->tamanho_bytes / 1000000, 2, ',', '.') ?> MB </td>
-                                        <td class="download text-start"><a style="text-decoration: none; color: black;" href="<?= base_url($video->path_video) ?>" download><i class="bi bi-download "></i> &nbsp; baixar</a></td>
-                                        <td><?= date('d/m/Y - H:i:s', strtotime($video->criado_em)) ?></td>
-                                        <td><button type="submit" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deletar-<?= $video->videos_id ?>">Deletar</button></td>
+                                        <td class="download text-start"><a style="text-decoration: none; color: black;" href="<?= base_url('gravacao/download/' . id_url((int) $video->videos_id)) ?>"><i class="bi bi-download "></i> &nbsp; baixar</a></td>
+                                        <td><?= data_br($video->criado_em, 'd/m/Y - H:i:s') ?></td>
+                                        <td><button type="submit" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deletar-<?= (int) $video->videos_id ?>">Deletar</button></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -312,16 +280,16 @@
                                     </div>
 
                                     <form action="<?= base_url('gravacao/deletarUnique') ?>" method="post">
+<?= csrf_field() ?>
                                         <input
                                             type="hidden"
                                             name="videos_id"
                                             value="<?= esc($video->videos_id) ?>">
 
 
-                                            <input type="hidden" name="path_video" value="<?= esc($video->path_video) ?>">
 
                                         <div class="modal-body text-center">
-                                            <h4>Deseja deletar o video <strong>#0<?= $video->videos_id ?></strong> da tabela?</h4>
+                                            <h4>Deseja deletar o video <strong>#0<?= (int) $video->videos_id ?></strong> da tabela?</h4>
                                             <p>Ao deletar, você não conseguirá fazer o download dele!</p>
                                         </div>
 
@@ -388,40 +356,7 @@
 
     </div>
 
-    <!-- ===================== FOOTER ===================== -->
-    <footer class="contentFooter">
-
-        <div class="footerMain">
-            <div class="aboutFooter">
-                <h4>FarmView</h4>
-                <p>
-                    Plataforma de monitoramento em ambientes controlados
-                </p>
-            </div>
-            <div class="linkFooter">
-                <h5>Parceiros</h5>
-
-                <ul>
-                    <li><a href="https://cebiobrasil.com.br/" target="_blank">CEBIO</a></li>
-                    <li>
-                        <a href="https://www.ifgoiano.edu.br/home/index.php/ceres" target="_blank">
-                            IF Goiano Campus Ceres
-                        </a>
-                    </li>
-                    <li><a href="https://goias.gov.br/fapeg/" target="_blank">FAPEG</a></li>
-                    <li><a href="https://lattes.cnpq.br/" target="_blank">CNPq</a></li>
-                    <li><a href="#">LabTI</a></li>
-                </ul>
-            </div>
-
-        </div>
-
-        <div class="footerBottom">
-            <p>© 2026 FarmView</p>
-            <p>IF Goiano — Campus Ceres</p>
-        </div>
-
-    </footer>
+    <?php partial('footer'); ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"

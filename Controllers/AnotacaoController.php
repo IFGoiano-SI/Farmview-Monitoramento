@@ -1,161 +1,71 @@
 <?php
 
-
 namespace Controllers;
-
-use Models\Database as Conexao;
-use \PDO;
-use Ultis\RenderView;
 
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use Models\AnotacaoModel;
+use Models\ExperimentoModel;
 
-
-class AnotacaoController extends RenderView
+class AnotacaoController extends BaseController
 {
-
-    private $anotacao;
-    private $participantes;
-    private $experimento;
+    private AnotacaoModel $anotacoes;
+    private ExperimentoModel $experimentos;
 
     public function __construct()
     {
-        $this->anotacao = new Conexao('anotacoes');
-        $this->participantes = new Conexao('participantes');
-        $this->experimento = new Conexao('experimentos');
+        $this->anotacoes = new AnotacaoModel();
+        $this->experimentos = new ExperimentoModel();
     }
 
-    protected function redirect($path, $message = null)
+    public function index(): void
     {
-        if ($message) {
-            $_SESSION['msg'] = $message;
-        }
-        header("Location: {$path}");
-        exit;
-    }
+        $experimento = $this->experimentos->ativoDoUsuario($this->usuarioId());
 
-
-    public function index()
-    {
-        $dadosAnotacao = $this->ListarDadosParaAnotacao();
-
-        // Verifica se existe experimento ativo
-        if (!$dadosAnotacao) {
-            $_SESSION['msg'] = [
-                'texto' => 'Nenhum experimento ativo encontrado!',
-                'color' => 'danger'
-            ];
-
-            return $this->redirect(base_url('home/tela'));
+        if (!$experimento) {
+            $this->redirect(base_url('home/tela'), 'Nenhum experimento ativo encontrado!', 'danger');
         }
 
-        // Busca a anotação do experimento
-        $anotacao = $this->anotacao->selectPesquisar(
-            null,
-            'anotacoes_experimentos_id = ?',
-            null,
-            null,
-            '*',
-            [$dadosAnotacao->experimentos_id]
-        )->fetch(PDO::FETCH_OBJ);
-
-        return $this->loadView('home/anotar', [
-            'pagina'        => 'Anotacoes',
-            'dadosAnotacao' => $dadosAnotacao,
-            'anotacao'      => $anotacao
+        $this->loadView('home/anotar', [
+            'pagina' => 'Anotacoes',
+            'dadosAnotacao' => $experimento,
+            'anotacao' => $this->anotacoes->doExperimento((int) $experimento->experimentos_id),
         ]);
     }
 
-
-    // public function criar()
-    // {
-    //     $data = [];
-    //     $data['pagina'] = 'Anotacoes';
-    //     $data['dadosAnotacao'] = $_SESSION['dadosAnotacao'];
-    //     return $this->loadView('home/anotar', $data);
-    // }
-
-
-
-    public function salvar()
+    public function salvar(): void
     {
-        $conteudo      = $_POST['anotacoes_conteudo'] ?? '';
-        $experimentoId = $_POST['experimento_id'] ?? '';
-        $anotacaoId    = $_POST['anotacao_id'] ?? '';
+        $conteudo = trim((string) ($_POST['anotacoes_conteudo'] ?? ''));
+        $experimentoId = (int) ($_POST['experimento_id'] ?? 0);
 
-        $experimento = $this->experimento->buscarExperimento($experimentoId);
+        $experimento = $this->experimentos->doUsuario($experimentoId, $this->usuarioId());
 
-        if ($experimento->experimentos_status === 'Finalizado') {
-            $_SESSION['msg'] = [
-                'texto' => 'Ação bloqueada: Este experimento está finalizado.',
-                'color' => 'danger'
-            ];
-
-            return $this->redirect(base_url('home/dashboard'));
+        if (!$experimento) {
+            $this->redirect(base_url('home/dashboard'), 'Experimento não encontrado.', 'danger');
         }
 
-        if (empty($conteudo) || empty($experimentoId)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Preencha o campo de anotação!',
-                'color' => 'danger'
-            ];
-
-            return $this->redirect(base_url('anotacao/index'));
+        if ($experimento->experimentos_status !== ExperimentoModel::STATUS_ATIVO) {
+            $this->redirect(base_url('home/dashboard'), 'Ação bloqueada: Este experimento está finalizado.', 'danger');
         }
 
-        if (!empty($anotacaoId)) {
-
-            $this->anotacao->update(
-                "anotacoes_id = '$anotacaoId'",
-                [
-                    'anotacoes_conteudo'      => $conteudo,
-                    'anotacoes_atualizado_em' => date('Y-m-d H:i:s')
-                ]
-            );
-
-            $_SESSION['msg'] = [
-                'texto' => 'Anotação atualizada com sucesso!',
-                'color' => 'success'
-            ];
-        } else {
-
-            $this->anotacao->insert([
-                'anotacoes_conteudo'        => $conteudo,
-                'anotacoes_criado_em'       => date('Y-m-d H:i:s'),
-                'anotacoes_atualizado_em'   => date('Y-m-d H:i:s'),
-                'anotacoes_experimentos_id' => $experimentoId,
-            ]);
-
-            $_SESSION['msg'] = [
-                'texto' => 'Anotação criada com sucesso!',
-                'color' => 'success'
-            ];
+        if ($conteudo === '') {
+            $this->redirect(base_url('anotacao/index'), 'Preencha o campo de anotação!', 'danger');
         }
 
-        return $this->redirect(base_url('anotacao/index'));
+        $resultado = $this->anotacoes->salvar($experimentoId, $conteudo);
+
+        $this->redirect(base_url('anotacao/index'), "Anotação {$resultado} com sucesso!");
     }
 
-    private function ListarDadosParaAnotacao()
+    /**
+     * Exporta o conteúdo atual do editor. Recursos remotos ficam desabilitados
+     * (impede que o servidor seja usado para acessar URLs internas).
+     */
+    public function exportarPdf(): void
     {
-        $usuariosId = $_SESSION['usuarios_logado']->usuarios_id;
+        $conteudoHtml = (string) ($_POST['anotacoes_conteudo'] ?? '');
 
-
-        $join = "experimentos on experimentos_id = participantes_experimentos_id
-        INNER JOIN usuarios on usuarios_id = participantes_usuarios_id";
-
-        $where = "usuarios_id = '$usuariosId' and experimentos_status='Ativo'";
-
-        return $this->participantes->select($join, $where)->fetch(PDO::FETCH_OBJ);
-    }
-
-
-    public function exportarPdf()
-    {
-        $conteudoHtml = $_POST['anotacoes_conteudo'] ?? ''; // vem do textarea do TinyMCE
-
-
-        $html = '
-            <!DOCTYPE html>
+        $html = '<!DOCTYPE html>
             <html lang="pt-br">
             <head>
                 <meta charset="UTF-8">
@@ -169,17 +79,20 @@ class AnotacaoController extends RenderView
             <body>' . $conteudoHtml . '</body>
             </html>';
 
-
         $options = new Options();
         $options->set('isHtml5ParserEnabled', true);
-        $options->set('isRemoteEnabled', true); // permite imagens externas, se precisar
+        $options->set('isRemoteEnabled', false);
+        $options->set('isPhpEnabled', false);
+        $options->set('isJavascriptEnabled', false);
+        $options->setChroot(dirname(__DIR__) . '/vendor/dompdf/dompdf');
 
         $dompdf = new Dompdf($options);
         $dompdf->loadHtml($html, 'UTF-8');
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
 
+        session_write_close();
         $dompdf->stream('documento.pdf', ['Attachment' => true]);
-        exit();
+        exit;
     }
 }

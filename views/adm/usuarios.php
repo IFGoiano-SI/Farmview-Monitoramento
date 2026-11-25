@@ -1,4 +1,3 @@
-<?php redirectPages(); ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 
@@ -96,7 +95,6 @@
     $foto = $_SESSION['usuarios_logado']->usuarios_imagem;
     $nome = $_SESSION['usuarios_logado']->usuarios_nome;
     $escolaridade = $_SESSION['usuarios_logado']->usuarios_escolaridade;
-    $url_rasp = $_SESSION['url_rasp'];
     ?>
 
     <div class="fullScreen">
@@ -136,10 +134,7 @@
         <div class="contentScreen">
 
             <div class="alert-container">
-                <?php if (isset($_SESSION['msg'])): ?>
-                    <?= msg($_SESSION['msg']['texto'], $_SESSION['msg']['color']); ?>
-                    <?php unset($_SESSION['msg']); ?>
-                <?php endif; ?>
+                <?php partial('alerts'); ?>
             </div>
 
             <!-- ===================== NAVBAR ===================== -->
@@ -153,7 +148,7 @@
 
                     <div class="navLogout">
                         <a href="#">
-                            <img id="imagePerson" src="<?= base_url($foto) ?>" alt="Foto de perfil">
+                            <img id="imagePerson" src="<?= esc(base_url($foto)) ?>" alt="Foto de perfil">
                         </a>
 
 
@@ -164,30 +159,7 @@
                 </div>
 
 
-                <div class="modal fade" id="meuModalSair" tabindex="-1">
-                    <div class="modal-dialog modal-dialog-centered modal-md">
-                        <div class="modal-content">
-
-                            <div class="modal-header">
-                                <h5 class="modal-title" style="text-align: center !important; font-size: x-large;"></h5>
-                            </div>
-
-                            <div class="modal-body">
-                                <form action="<?= base_url('login/logout') ?>" method="post">
-                                    <h4 class="text-center mt-4 mb-5">Deseja sair da sua conta?</h4>
-                                    <p class="text-center">
-                                        <button type="button" class="btn-voltar" data-bs-dismiss="modal">Voltar</button>
-                                        <button type="submit" class="btn-finalizar" data-bs-dismiss="modal"
-                                            data-bs-toggle="modal" data-bs-target="#modal2">Sair</button>
-                                    </p>
-                                </form>
-                            </div>
-
-                            <div class="modal-footer"></div>
-
-                        </div>
-                    </div>
-                </div>
+                <?php partial('logout_modal'); ?>
 
             <?php endif; ?>
 
@@ -209,12 +181,13 @@
                             </div>
 
                             <form action="<?= base_url('adm/createUser') ?>" method="post" enctype="multipart/form-data">
+<?= csrf_field() ?>
                                 <div class="modal-body">
                                     <div class="row">
 
                                         <div class="col-md-6 mt-2">
                                             <label for="usuarios_nome">Nome</label>
-                                            <input type="text" class="form-control" name="usuarios_nome" id="nome" placeholder="Informe o nome do usuário" required>
+                                            <input type="text" class="form-control" name="usuarios_nome" id="nome" placeholder="Informe o nome do usuário" maxlength="40" value="<?= esc(old('usuarios_nome')) ?>" required>
                                         </div>
 
                                         <div class="col-md-6 mt-2">
@@ -223,11 +196,10 @@
                                                 class="form-control"
                                                 id="usuarios_escolaridade"
                                                 required>
-                                                <option value="" selected disabled>Selecione</option>
-                                                <option value="Ensino Médio">Ensino Médio</option>
-                                                <option value="Graduação">Graduação</option>
-                                                <option value="Mestrado">Mestrado</option>
-                                                <option value="Doutorado">Doutorado</option>
+                                                <option value="" <?= old('usuarios_escolaridade') === '' ? 'selected' : '' ?> disabled>Selecione</option>
+                                                <?php foreach (\Services\Validacao::ESCOLARIDADES as $opcao): ?>
+                                                    <option value="<?= esc($opcao) ?>" <?= old('usuarios_escolaridade') === $opcao ? 'selected' : '' ?>><?= esc($opcao) ?></option>
+                                                <?php endforeach; ?>
                                             </select>
                                         </div>
 
@@ -239,7 +211,7 @@
                                                 id="usuarios_email"
                                                 required
                                                 placeholder="Informe seu email"
-                                                value="<?= $_POST['usuarios_email'] ?? '' ?>">
+                                                value="<?= esc(old('usuarios_email')) ?>">
                                         </div>
 
                                         <div class="col-md-6 mt-4">
@@ -249,7 +221,9 @@
                                                 class="form-control"
                                                 id="senha"
                                                 required
-                                                placeholder="Informe sua senha">
+                                                minlength="<?= \Services\Validacao::SENHA_MINIMA ?>"
+                                                autocomplete="new-password"
+                                                placeholder="Mínimo de <?= \Services\Validacao::SENHA_MINIMA ?> caracteres">
 
 
                                         </div>
@@ -260,8 +234,8 @@
                                                 name="usuarios_imagem"
                                                 id="usuarios_imagem"
                                                 class="form-control"
-
-                                                accept="image/*">
+                                                required
+                                                accept="image/png, image/jpeg">
                                         </div>
 
                                         <div class="col-md-6 mt-4 mb-3">
@@ -270,9 +244,9 @@
                                                 class="form-control"
                                                 id="usuarios_nivel"
                                                 required>
-                                                <option value="" selected disabled>Selecione</option>
-                                                <option value="1">Normal</option>
-                                                <option value="2">Administrador</option>
+                                                <option value="" <?= old('usuarios_nivel') === '' ? 'selected' : '' ?> disabled>Selecione</option>
+                                                <option value="1" <?= old('usuarios_nivel') === '1' ? 'selected' : '' ?>>Normal</option>
+                                                <option value="2" <?= old('usuarios_nivel') === '2' ? 'selected' : '' ?>>Administrador</option>
                                             </select>
                                         </div>
 
@@ -316,12 +290,12 @@
                                     <td>#0<?= esc($user->usuarios_id) ?></td>
                                     <td class="nomeUsuario"><?= esc(mb_strimwidth($user->usuarios_nome, 0, '50', '...')) ?></td>
                                     <td><?= esc($user->usuarios_escolaridade) ?></td>
-                                    <td> <?= $user->usuarios_ativo == '1' ? 'Ativo' : 'Inativo' ?>
+                                    <td> <?= (int) $user->usuarios_ativo === 1 ? 'Ativo' : 'Inativo' ?>
                                     </td>
-                                    <td> <?= $user->usuarios_nivel == '1' ? 'Normal' : 'Adm' ?>
+                                    <td> <?= (int) $user->usuarios_nivel === 2 ? 'Adm' : 'Normal' ?>
                                     </td>
 
-                                    <form action="<?= base_url('adm/detailsUser/' . rtrim(base64_encode((string) $user->usuarios_id), '=')) ?>" method="get">
+                                    <form action="<?= base_url('adm/detailsUser/' . id_url((int) $user->usuarios_id)) ?>" method="get">
                                         <td><button type="submit" class="btn btn-outline-primary">Ver mais</button></td>
 
                                     </form>
@@ -346,40 +320,7 @@
     </div>
 
 
-    <!-- ===================== FOOTER ===================== -->
-    <footer class="contentFooter" style="height: auto;">
-
-        <div class="footerMain">
-            <div class="aboutFooter">
-                <h4>FarmView</h4>
-                <p>
-                    Plataforma de monitoramento em ambientes controlados
-                </p>
-            </div>
-            <div class="linkFooter">
-                <h5>Parceiros</h5>
-
-                <ul>
-                    <li><a href="https://cebiobrasil.com.br/" target="_blank">CEBIO</a></li>
-                    <li>
-                        <a href="https://www.ifgoiano.edu.br/home/index.php/ceres" target="_blank">
-                            IF Goiano Campus Ceres
-                        </a>
-                    </li>
-                    <li><a href="https://goias.gov.br/fapeg/" target="_blank">FAPEG</a></li>
-                    <li><a href="https://lattes.cnpq.br/" target="_blank">CNPq</a></li>
-                    <li><a href="#">LabTI</a></li>
-                </ul>
-            </div>
-
-        </div>
-
-        <div class="footerBottom">
-            <p>© 2026 FarmView</p>
-            <p>IF Goiano — Campus Ceres</p>
-        </div>
-
-    </footer>
+    <?php partial('footer', ['estilo' => 'height: auto;']); ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
@@ -461,6 +402,13 @@
 
         atualizarTabela();
     </script>
+
+    <?php if (!empty($_SESSION['old'])): ?>
+        <script>
+            // Reabre o formulário preenchido após erro de validação.
+            new bootstrap.Modal(document.getElementById('createNewUser')).show();
+        </script>
+    <?php endif; ?>
 
 
 </body>

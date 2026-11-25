@@ -2,384 +2,218 @@
 
 namespace Controllers;
 
-// require_once("Models/Database.php");
-// require_once("Config/Helpers.php");
-// require_once("Ultis/RenderView.php");
+use Models\ExperimentoModel;
+use Models\VideoModel;
+use Services\FlaskService;
+use Services\Logger;
 
-use Exception;
-use Models\Database as Conexao;
-use \PDO;
-use \Ultis\RenderView;
-use \Ultis\FlaskService;
-
-class HomeController extends RenderView
+class HomeController extends BaseController
 {
-
-    private $participantes;
-    private $usuario;
-    private $flask;
-    private $video;
-
+    private ExperimentoModel $experimentos;
+    private FlaskService $flask;
 
     public function __construct()
     {
-        $this->participantes = new Conexao('participantes');
-        $this->usuario = new UsuarioController();
+        $this->experimentos = new ExperimentoModel();
         $this->flask = new FlaskService();
-        $this->video = new Conexao('videos_experimentos');
     }
 
-
-
-    public function index()
+    public function index(): void
     {
-        $data = [];
+        $experimento = $this->experimentos->ativoDoUsuario($this->usuarioId());
 
-        $data['pagina'] = "Experimento de usuario";
-
-        $this->usuario->listarUsuario();
-
-        if ($this->tela()) {
-
-            $usuario_id = $_SESSION['usuarios_logado']->usuarios_id;
-
-            $join = 'usuarios on usuarios_id = participantes_usuarios_id
-            INNER JOIN experimentos on experimentos_id = participantes_experimentos_id
-            INNER JOIN bancadas_experimentos on be_experimentos_id = experimentos_id
-            INNER JOIN bancadas on bancadas_id = be_bancadas_id';
-
-            $where = "experimentos_status = 'Ativo'
-            AND participantes_usuarios_id = $usuario_id";
-
-            $order = 'experimentos_id DESC';
-
-            $usuarioExperimento = $this->participantes
-                ->select($join, $where, $order, 1)
-                ->fetch(PDO::FETCH_OBJ);
-
-            $data['usuarioExperimento'] = $usuarioExperimento ?? '';
-
-            // ==============================
-            // DADOS DO RASPBERRY / FLASK
-            // ==============================
-
-            $data['sensores'] = $this->flask->getSensores();
-
-            $data['videoUrl'] = $this->flask->getVideoUrl();
-
-            $st = $this->consultarStatusRasp();
-            $data['camera_on'] = $st['camera_on'] ?? false;
-            $data['gravando']  = $st['gravando'] ?? false;
-            $_SESSION['gravando'] = $data['gravando'];   // mantém a sessão alinhada com a realidade
-
-            // ==============================
-
-            return $this->loadView('home/dashboard', $data);
-        } else {
-
-            return $this->loadView('home/index', $data);
-        }
-    }
-
-    public function sensores()
-    {
-        header('Content-Type: application/json; charset=utf-8');
-
-        try {
-
-            $sensores = $this->flask->getSensores();
-
-            echo json_encode([
-                'success' => true,
-                'v'       => $sensores['v'] ?? [],
-                'pct'     => $sensores['pct'] ?? []
-            ]);
-        } catch (\Exception $e) {
-
-            http_response_code(500);
-
-            echo json_encode([
-                'success' => false,
-                'erro' => $e->getMessage()
-            ]);
-        }
-
-        exit;
-    }
-
-
-
-    public function tela()
-    {
-
-        $usuario_id = $_SESSION['usuarios_logado']->usuarios_id;
-        $join = "usuarios on usuarios_id = participantes_usuarios_id
-                 INNER JOIN experimentos on experimentos_id = participantes_experimentos_id";
-        $where = "experimentos_status = 'Ativo' AND participantes_usuarios_id = '$usuario_id'";
-
-        $resultado =  $this->participantes->select($join, $where)->fetch(PDO::FETCH_OBJ);
-
-        return $resultado ? true : false;
-    }
-    public function toggleDispositivo()
-    {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header('Location: ' . base_url('home/index'));
+        if (!$experimento) {
+            $this->loadView('home/index', ['pagina' => 'Experimento de usuario']);
             return;
         }
 
-        $rotasPermitidas = [
-            'api/cooler',
-            'api/lampada',
-            'api/bomba',
-            'api/camera/toggle',
-            'api/camera/gravar'
-        ];
-
-        $rota = $_POST['rota'] ?? '';
-        $acao = $_POST['acao'] ?? 'off';
-        $tomada = $_POST['tomada'] ?? null; // Pega o pino GPIO se for enviado
-
-        // Se a View enviou um 'gpio', usamos a sua nova função
-        if ($tomada !== null) {
-            try {
-                // Chama a função que você criou (ajuste se ela estiver em outro Model/Helper)
-                $this->controladorTomada($tomada, $acao);
-                $_SESSION['tomada_' . $tomada] = $acao;
-
-                if ($acao === 'on') {
-                    $_SESSION['tomada_' . $tomada] = 'Ligado';
-                } else {
-                    $_SESSION['tomada_' . $tomada] = 'Desligado';
-                }
-                // $_SESSION['msg'] = [
-                //     'texto' => "Tomada {$tomada} alterada com sucesso para {$acao}!",
-                //     'color' => 'success'
-                // ];
-            } catch (\Exception $e) {
-                $_SESSION['msg'] = [
-                    'texto' => "Erro ao controlar GPIO: " . $e->getMessage(),
-                    'color' => 'danger'
-                ];
-            }
-        }
-        // Se não for GPIO, segue o fluxo antigo das rotas permitidas
-        elseif (in_array($rota, $rotasPermitidas, true)) {
-            $this->flask->toggleDispositivo($rota, $acao);
-        } elseif ($rota === 'api/camera/toggle') {
-
-
-            $url = "http://" . $_SESSION['url_rasp'] . "/api/camera/toggle";
-
-            $ch = curl_init();
-
-            curl_setopt_array($ch, [
-                CURLOPT_URL => $url,
-                CURLOPT_POST => true,
-                CURLOPT_POSTFIELDS => http_build_query([
-                    'acao' => $acao
-                ]),
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT => 10
-            ]);
-
-            $resposta = curl_exec($ch);
-
-            if (curl_errno($ch)) {
-                throw new Exception(curl_error($ch));
-            }
-
-            curl_close($ch);
-        } elseif (in_array($rota, $rotasPermitidas, true)) {
-
-            $this->flask->toggleDispositivo($rota, $acao);
-        }
-
-        // Recarrega a página inicial
-        return $this->index();
+        $this->loadView('home/dashboard', [
+            'pagina' => 'Experimento de usuario',
+            'usuarioExperimento' => $experimento,
+        ] + $this->estadoBancada());
     }
 
-
-    function controladorTomada($tomada, $acao)
+    /** JSON consultado periodicamente pelo dashboard. */
+    public function sensores(): void
     {
-        $url = "http://" . $_SESSION['url_rasp'] . "/toggle_pin_{$tomada}?acao={$acao}";
+        // Libera o lock da sessão: o polling não bloqueia outras abas do usuário.
+        session_write_close();
 
-        $ch = curl_init();
+        $estado = $this->estadoBancada();
 
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $url,
-            CURLOPT_POST => true,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 10,
+        $this->json([
+            'success' => $estado['online'],
+            'online' => $estado['online'],
+            'v' => $estado['sensores']['v'],
+            'pct' => $estado['sensores']['pct'],
+            'atualizado_em' => $estado['sensores']['atualizado_em'],
+            'idade_segundos' => $estado['idadeLeitura'],
+            'camera_on' => $estado['camera_on'],
+            'gravando' => $estado['gravando'],
+            'tomadas' => $estado['tomadas'],
+            'limites' => $estado['limites'],
         ]);
-
-        $resposta = curl_exec($ch);
-
-        if (curl_errno($ch)) {
-            throw new Exception(curl_error($ch));
-        }
-
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-        curl_close($ch);
-
-        return [
-            'http_code' => $httpCode,
-            'response' => json_decode($resposta, true)
-        ];
     }
 
-
-    public function ligarCamera()
+    public function status(): void
     {
-        $url = "http://" . $_SESSION['url_rasp'] . "/toggle_camera";
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_exec($ch);
-        curl_close($ch);
-
-        return $this->index();
+        $this->sensores();
     }
 
-    private function chamarRasp(string $rota, int $timeout = 15): array
+    public function toggleDispositivo(): void
     {
-        $ch = curl_init("http://" . $_SESSION['url_rasp'] . $rota);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-        $body = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        $tomada = filter_var($_POST['tomada'] ?? null, FILTER_VALIDATE_INT);
+        $acao = ($_POST['acao'] ?? 'off') === 'on' ? 'on' : 'off';
 
-        return ['code' => $code, 'data' => json_decode($body, true) ?? []];
+        if (!$this->experimentos->ativoDoUsuario($this->usuarioId())) {
+            $this->redirect(base_url('home'), 'Você precisa de um experimento ativo para controlar a bancada.', 'danger');
+        }
+
+        if (!in_array($tomada, FlaskService::TOMADAS, true)) {
+            $this->redirect(base_url('home/dashboard'), 'Tomada inválida.', 'danger');
+        }
+
+        if (!$this->flask->definirTomada($tomada, $acao)) {
+            $this->redirect(base_url('home/dashboard'), "A bancada não respondeu. A tomada {$tomada} pode não ter sido alterada.", 'warning');
+        }
+
+        Logger::info('Tomada alterada', ['tomada' => $tomada, 'acao' => $acao]);
+        $this->redirect(base_url('home/dashboard'));
     }
 
-
-    public function iniciarGravacao()
+    public function ligarCamera(): void
     {
-        header('Content-Type: application/json; charset=utf-8');
+        $acao = ($_POST['acao'] ?? '') === 'off' ? 'off' : 'on';
 
-        $resp = $this->chamarRasp('/start_recording');
-
-        if ($resp['code'] === 0) {
-            http_response_code(503);
-            echo json_encode(['erro' => 'Sem comunicação com o sistema da câmera']);
-            exit;
+        if (!$this->experimentos->ativoDoUsuario($this->usuarioId())) {
+            $this->redirect(base_url('home'), 'Você precisa de um experimento ativo para controlar a bancada.', 'danger');
         }
 
-        if ($resp['code'] === 200) {
-            $_SESSION['gravando'] = true;
-            $_SESSION['gravacao_experimento_id'] = (int) ($_POST['experimentos_id'] ?? 0);
+        if (!$this->flask->definirCamera($acao)) {
+            $this->redirect(base_url('home/dashboard'), 'A câmera não respondeu. Verifique a conexão com a bancada.', 'warning');
         }
 
-        http_response_code($resp['code']);
-        echo json_encode($resp['data']);
-        exit;
+        $this->redirect(base_url('home/dashboard'));
     }
 
-
-    private function finalizarGravacao(): array
+    public function iniciarGravacao(): void
     {
-        set_time_limit(300);
+        $experimento = $this->experimentos->ativoDoUsuario($this->usuarioId());
 
-        $resp = $this->chamarRasp('/stop_recording', 300);
-        unset($_SESSION['gravando']);
-
-        if ($resp['code'] !== 200) {
-            return ['ok' => false, 'erro' => $resp['data']['erro'] ?? 'Falha ao parar a gravação'];
+        if (!$experimento) {
+            $this->json(['erro' => 'Nenhum experimento ativo para vincular a gravação.'], 409);
         }
 
-        $arquivo = basename($resp['data']['arquivo']);
+        $resposta = $this->flask->iniciarGravacao();
 
-        // raiz do projeto (Controllers/ -> ..), sem depender do SCRIPT_FILENAME
-        $pasta = dirname(__DIR__) . '/Public/UploadsVideos/';
+        if ($resposta['code'] === 0) {
+            $this->json(['erro' => 'Sem comunicação com o sistema da câmera'], 503);
+        }
+
+        if (!$resposta['ok']) {
+            $this->json(['erro' => $resposta['data']['erro'] ?? 'Não foi possível iniciar a gravação'], $resposta['code']);
+        }
+
+        $_SESSION['gravacao_experimento_id'] = (int) $experimento->experimentos_id;
+        $this->json($resposta['data']);
+    }
+
+    public function pararGravacao(): void
+    {
+        $usuarioId = $this->usuarioId();
+        $experimento = $this->experimentos->ativoDoUsuario($usuarioId);
+        $experimentoId = (int) ($experimento->experimentos_id ?? ($_SESSION['gravacao_experimento_id'] ?? 0));
+
+        // A parada inclui a conversão para mp4 no Raspberry e o download do vídeo,
+        // o que pode levar minutos. Liberamos a sessão para não travar o usuário.
+        session_write_close();
+        set_time_limit(320);
+
+        $resultado = $this->finalizarGravacao($usuarioId, $experimentoId);
+
+        session_start();
+        unset($_SESSION['gravacao_experimento_id']);
+
+        if (!$resultado['ok']) {
+            $this->json($resultado, 500);
+        }
+
+        $this->json($resultado);
+    }
+
+    private function finalizarGravacao(int $usuarioId, int $experimentoId): array
+    {
+        $resposta = $this->flask->pararGravacao();
+
+        if (!$resposta['ok']) {
+            return ['ok' => false, 'erro' => $resposta['data']['erro'] ?? 'Falha ao parar a gravação'];
+        }
+
+        if ($experimentoId <= 0) {
+            return ['ok' => false, 'erro' => 'Gravação parada, mas não há experimento ativo para vinculá-la.'];
+        }
+
+        $arquivo = basename((string) ($resposta['data']['arquivo'] ?? ''));
+
+        if (!preg_match('/^rec_\d{8}_\d{6}\.(mp4|avi)$/', $arquivo)) {
+            return ['ok' => false, 'erro' => 'Nome de arquivo de gravação inválido'];
+        }
+
+        $pasta = GravacaoController::pastaVideos();
 
         if (!is_dir($pasta) && !mkdir($pasta, 0775, true)) {
-            return ['ok' => false, 'erro' => 'Não foi possível criar a pasta: ' . $pasta];
+            Logger::erro('Não foi possível criar a pasta de vídeos', ['pasta' => $pasta]);
+            return ['ok' => false, 'erro' => 'Não foi possível salvar o vídeo no servidor'];
         }
 
-        $fp = fopen($pasta . $arquivo, 'wb');
-        if (!$fp) {
-            return ['ok' => false, 'erro' => 'Sem permissão para gravar em: ' . $pasta];
-        }
-
-        $ch = curl_init("http://" . $_SESSION['url_rasp'] . '/gravacoes/' . rawurlencode($arquivo));
-        curl_setopt($ch, CURLOPT_FILE, $fp);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 300);
-        curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        fclose($fp);
-
-        if ($code !== 200) {
-            @unlink($pasta . $arquivo);
+        if (!$this->flask->baixarGravacao($arquivo, $pasta . $arquivo)) {
             return ['ok' => false, 'erro' => 'Falha ao baixar o vídeo do sistema da câmera'];
         }
 
+        $dados = [
+            'path_video' => 'storage/videos/' . $arquivo,
+            'usuarios_id' => $usuarioId,
+            'experimentos_id' => $experimentoId,
+            'duracao_segundos' => (int) ($resposta['data']['duracao'] ?? 0),
+            'tamanho_bytes' => (int) filesize($pasta . $arquivo),
+            'videos_status' => 'Ativo',
+            'criado_em' => date('Y-m-d H:i:s'),
+        ];
+
+        if (!(new VideoModel())->insert($dados)) {
+            return ['ok' => false, 'erro' => 'Vídeo baixado, mas falhou ao salvar no banco'];
+        }
+
+        return ['ok' => true, 'arquivo' => $arquivo, 'duracao' => $dados['duracao_segundos'], 'tamanho' => $dados['tamanho_bytes']];
+    }
+
+    /**
+     * Estado real da bancada, lido do Raspberry (não da sessão do usuário).
+     */
+    private function estadoBancada(): array
+    {
+        $status = $this->flask->status();
+        $sensores = $this->flask->getSensores();
+        $config = $status['config'] ?? [];
+
+        $tomadas = [];
+        foreach (FlaskService::TOMADAS as $n) {
+            $valor = $status['tomadas'][$n] ?? ($status['tomadas'][(string) $n] ?? null);
+            $tomadas[$n] = $valor === null ? null : (bool) $valor;
+        }
+
         return [
-            'ok'         => true,
-            'arquivo'    => $arquivo,
-            'path_video' => 'Public/UploadsVideos/' . $arquivo,
-            'duracao'    => (int) ($resp['data']['duracao'] ?? 0),
-            'tamanho'    => (int) filesize($pasta . $arquivo),
+            'online' => $status !== null || $sensores['online'],
+            'sensores' => $sensores,
+            'idadeLeitura' => $status['sensores']['idade_segundos'] ?? null,
+            'camera_on' => (bool) ($status['camera_on'] ?? false),
+            'gravando' => (bool) ($status['gravando'] ?? false),
+            'tomadas' => $tomadas,
+            'limites' => [
+                'baixa' => (float) ($config['limite_umidade_baixa'] ?? 35),
+                'alta' => (float) ($config['limite_umidade_alta'] ?? 60),
+            ],
+            'videoUrl' => base_url('camera/stream'),
         ];
-    }
-
-    // Temporário, só para testar. Depois vira a versão que salva no banco.
-    public function pararGravacao()
-    {
-        header('Content-Type: application/json; charset=utf-8');
-
-        $r = $this->finalizarGravacao();
-        if (!$r['ok']) {
-            http_response_code(500);
-            echo json_encode($r);
-            exit;
-        }
-
-        $salvou = $this->video->insert([
-            'path_video'       => $r['path_video'],
-            'usuarios_id'      => $_SESSION['usuarios_logado']->usuarios_id,
-            'experimentos_id'  => (int) ($_SESSION['gravacao_experimento_id'] ?? 0),
-            'duracao_segundos' => $r['duracao'],
-            'tamanho_bytes'    => $r['tamanho'],
-            'videos_status'     => 'Ativo',
-            'criado_em'        => date('Y-m-d H:i:s'),
-        ]);
-
-        unset($_SESSION['gravacao_experimento_id']);
-
-        if (!$salvou) {
-            http_response_code(500);
-            echo json_encode(['ok' => false, 'erro' => 'Vídeo baixado, mas falhou ao salvar no banco']);
-            exit;
-        }
-
-        $_SESSION['msg'] = [
-            'texto' => 'Video salvo com sucesso!',
-            'color' => 'success',
-        ];
-
-        echo json_encode($r);
-        exit;
-    }
-
-    private function consultarStatusRasp(): array
-    {
-        $ch = curl_init("http://" . $_SESSION['url_rasp'] . "/status");
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 3,
-        ]);
-
-        $body = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($code !== 200 || !$body) {
-            return [];
-        }
-
-        return json_decode($body, true) ?? [];
     }
 }

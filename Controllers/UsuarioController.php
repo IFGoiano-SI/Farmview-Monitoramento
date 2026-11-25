@@ -2,252 +2,71 @@
 
 namespace Controllers;
 
-// require_once("Models/Database.php");
-// require_once("Config/Helpers.php");
-// require_once("Ultis/RenderView.php");
+use Models\UsuarioModel;
+use RuntimeException;
+use Services\Upload;
+use Services\Validacao;
 
-use Models\Database as Conexao;
-use \PDO;
-use \Ultis\RenderView;
-
-class UsuarioController extends RenderView
-
-
+class UsuarioController extends BaseController
 {
-    private $usuario;
+    private UsuarioModel $usuarios;
 
     public function __construct()
     {
-
-        $this->usuario = new Conexao('usuarios');
+        $this->usuarios = new UsuarioModel();
     }
 
-    public function index()
+    public function index(): void
     {
-        return $this->loadView('login/cadastro', []);
+        $this->loadView('login/cadastro');
     }
 
-    public function flash(string $texto, string $tipo = 'success'): array
+    /** Autocadastro: sempre cria usuário comum (nível 1). */
+    public function cadastrar(): void
     {
-        return [
-            'texto' => $texto,
-            'tipo' => $tipo
-        ];
-    }
-
-
-    public function cadastrar()
-    {
-        // var_dump($_POST);
-        $data = [];
-        $usuarios_imagem = 'uploadImages/default.png';
-
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            return $this->loadView('login/cadastro', []);
-        }
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && empty($_FILES)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Arquivo muito grande! Máximo permitido foi excedido.',
-                'color' => 'danger'
-            ];
-
-            return $this->loadView('login/cadastro', $data);
-        }
-
-
-        // Verifica se existe valor na varivel
-        if (
-            !isset($_FILES['usuarios_imagem']) ||
-            empty($_FILES['usuarios_imagem']['name']) ||
-            $_FILES['usuarios_imagem']['error'] !== 0
-        ) {
-
-            $_SESSION['msg'] = [
-                'texto' => 'Atenção! Informe uma imagem ao seu perfil!',
-                'color' => 'warning'
-            ];
-            return $this->loadView('login/cadastro', $data);
-        }
-        $arquivo = $_FILES['usuarios_imagem']; //atribui o caminho para variavel
-
-
-        // Validação se a imagem for maior que 2MB
-        if (!$this->usuario->validaImagem($arquivo)) {
-            $_SESSION['msg'] = [
-                'texto' => "Erro! Selecione outra imagem até 2MB",
-                'color' => 'danger',
-            ];
-
-            return $this->loadView('login/cadastro', $data);
-        }
-        // Validação para ver se a imagem esta no formato permitido
-        if (!$this->usuario->tipoImagem($arquivo)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Formato da imagem não permitido - Selecione apenas JPEG, JPG ou PNG',
-                'color' => 'danger',
-            ];
-
-
-            return $this->loadView('login/cadastro', $data);
-        }
-
-        // Validação para inserção de imagem no tamanho permitido
-        // if (!$this->usuario->tamanhoImagem($arquivo)) {
-        //     $_SESSION['msg'] = [
-        //         'texto' => 'Erro! Tamanho de imagem menor que 300x300. Selecione uma imagem maior!',
-        //         'color' => 'danger',
-        //     ];
-
-
-
-        //     return $this->loadView('login/cadastro', $data);
-        // }
-        $pasta = __DIR__ . '/../Public/uploadImages/';
-        $nomearquivo = uniqid() . "-" . basename($arquivo['name']);
-        $caminhoFinal = $pasta . $nomearquivo; //String para o banco de dados
-
-        if (!move_uploaded_file($arquivo['tmp_name'], $caminhoFinal)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Erro ao fazer o upload da imagem',
-                'color' => 'danger',
-            ];
-
-            
-            return $this->loadView('login/cadastro', $data);
-        }
-
-        $usuarios_imagem = 'Public/uploadImages/' . $nomearquivo; //atribue valor para a variavel
-
         $post = $_POST;
+        $voltar = base_url('registrar');
 
-        $values = [
-
-            'usuarios_nome' => $post['usuarios_nome'] ?? '',
+        $dados = [
+            'usuarios_nome' => trim((string) ($post['usuarios_nome'] ?? '')),
             'usuarios_escolaridade' => $post['usuarios_escolaridade'] ?? '',
-            'usuarios_email' => $post['usuarios_email'],
-            'usuarios_senha' => password_hash($post['usuarios_senha'], PASSWORD_DEFAULT),
-            'usuarios_imagem' => $usuarios_imagem,
-            'usuarios_ativo' => 1,
-            'usuarios_nivel' => 1,
-
-
+            'usuarios_email' => trim((string) ($post['usuarios_email'] ?? '')),
+            'usuarios_senha' => (string) ($post['usuarios_senha'] ?? ''),
         ];
 
-        $emailUsuario = $values['usuarios_email'];
-
-        $where = "usuarios_email = '$emailUsuario'";
-
-        $usuarioEmail = $this->usuario->select(null, $where)->fetchObject();
-
-
-        // Se cadastrar sem nome
-        if (empty($values['usuarios_nome'])) {
-            $_SESSION['msg'] = [
-                'texto' => 'O campo nome não pode ser vazio!',
-                'color' => 'danger',
-            ];
-
-            return $this->loadView('login/cadastro', []);
+        // Toda a validação acontece antes do upload (não deixa arquivos órfãos).
+        if ($erro = Validacao::usuario($dados)) {
+            $this->voltarComErro($voltar, $erro, $post);
         }
 
-        // Cadastrar nomes menores que 3 caracteres
-        if (strlen($values['usuarios_nome']) < 3) {
-            $_SESSION['msg'] = [
-                'texto' => 'O campo nome precisa ter mais de 3 caracteres!',
-                'color' => 'danger',
-            ];
-
-            return $this->loadView('login/cadastro', []);
+        if ($this->usuarios->emailEmUso($dados['usuarios_email'])) {
+            $this->voltarComErro($voltar, 'Email ja cadastrado!', $post);
         }
 
-
-        // Cadatrar nomes maiores que 40 caracteres
-        if (strlen($values['usuarios_nome']) > 40) {
-            $_SESSION['msg'] = [
-                'texto' => 'O campo nome precisa ter menos de 40 caracteres!',
-                'color' => 'danger',
-            ];
-
-            return $this->loadView('login/cadastro', []);
+        try {
+            $imagem = Upload::imagem($_FILES['usuarios_imagem'] ?? null, 'Public/uploadImages');
+        } catch (RuntimeException $e) {
+            $this->voltarComErro($voltar, $e->getMessage(), $post, 'warning');
         }
 
-        // Se a escolaridade vier vazia
-        if (empty($values['usuarios_escolaridade'])) {
-            $_SESSION['msg'] = [
-                'texto' => 'Escolha o grau de escolaridade',
-                'color' => 'danger',
-            ];
+        try {
+            $this->usuarios->criar([
+                'usuarios_nome' => $dados['usuarios_nome'],
+                'usuarios_escolaridade' => $dados['usuarios_escolaridade'],
+                'usuarios_email' => $dados['usuarios_email'],
+                'usuarios_senha' => password_hash($dados['usuarios_senha'], PASSWORD_DEFAULT),
+                'usuarios_imagem' => $imagem,
+                'usuarios_ativo' => 1,
+                'usuarios_nivel' => 1,
+            ]);
+        } catch (\PDOException $e) {
+            Upload::remover($imagem);
 
-            return $this->loadView('login/cadastro', []);
+            // 23000 = violação de UNIQUE (cadastro simultâneo com o mesmo e-mail).
+            $mensagem = $e->getCode() === '23000' ? 'Email ja cadastrado!' : 'Erro ao realizar o cadastro, tente novamente!';
+            $this->voltarComErro($voltar, $mensagem, $post);
         }
 
-        // Validação do email do usuario
-        if (!filter_var($values['usuarios_email'], FILTER_VALIDATE_EMAIL)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Formato de email inválido!',
-                'color' => 'danger',
-            ];
-
-            return $this->loadView('login/cadastro', []);
-        }
-
-        if ($usuarioEmail) {
-            $_SESSION['msg'] = [
-                'texto' => 'Email ja cadastrado!',
-                'color' => 'danger',
-            ];
-
-            return $this->loadView('login/cadastro', []);
-        }
-
-
-        // Validação de senha
-
-        if (strlen($values['usuarios_senha']) < 5) {
-            $_SESSION['msg'] = [
-                'texto' => 'Não é permitido criar uma senha com menos de 5 caracteres!',
-                'color' => 'danger',
-            ];
-
-            return $this->loadView('login/cadastro', []);
-        }
-
-        // echo '<pre>';
-
-        // var_dump($emailUsuario);
-        // var_dump($where);
-        // var_dump($usuarioEmail);
-
-        // exit;
-
-
-        if ($this->usuario->insert($values)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Cadastro realizado com sucesso!',
-                'color' => 'success',
-            ];
-
-
-            header('Location: ' . base_url('login'));
-            exit();
-        } else {
-            $_SESSION['msg'] = [
-                'texto' => 'Erro ao realizar o cadastro, tente novamente!',
-                'color' => 'danger',
-            ];
-
-            return $this->loadView('login/cadastro', []);
-        }
-    }
-
-    public function listarUsuario()
-    {
-        $usuarioId = $_SESSION['usuarios_logado']->usuarios_id;
-        $where = "usuarios_ativo = '1' and usuarios_id != '$usuarioId'";
-
-        $usuariosCadastrado = $this->usuario->select($join = null, $where, $order = null, $limit = null)->fetchAll(PDO::FETCH_OBJ);
-        return $_SESSION['usuarios'] = $usuariosCadastrado;
+        $this->redirect(base_url('login'), 'Cadastro realizado com sucesso!');
     }
 }

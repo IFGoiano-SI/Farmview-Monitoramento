@@ -1,4 +1,3 @@
-<?php redirectPages(); ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 
@@ -99,10 +98,7 @@
         <div class="contentScreen">
 
             <div class="alert-container">
-                <?php if (isset($_SESSION['msg'])): ?>
-                    <?= msg($_SESSION['msg']['texto'], $_SESSION['msg']['color']); ?>
-                    <?php unset($_SESSION['msg']); ?>
-                <?php endif; ?>
+                <?php partial('alerts'); ?>
             </div>
 
             <?php if (isset($_SESSION['usuarios_logado'])): ?>
@@ -124,7 +120,7 @@
 
                     <div class="navLogout">
                         <a href="#">
-                            <img id="imagePerson" src="<?= base_url($foto) ?>" alt="Foto de perfil">
+                            <img id="imagePerson" src="<?= esc(base_url($foto)) ?>" alt="Foto de perfil">
                         </a>
 
                         <button type="button" class="btn-logout" data-bs-toggle="modal" data-bs-target="#meuModalSair">
@@ -134,114 +130,77 @@
 
                 </div>
 
-                <!-- Modal de logout -->
-                <div class="modal fade" id="meuModalSair" tabindex="-1">
-                    <div class="modal-dialog modal-dialog-centered modal-md">
-                        <div class="modal-content">
-
-                            <div class="modal-header">
-                                <h5 class="modal-title" style="text-align: center !important; font-size: x-large;"></h5>
-                            </div>
-
-                            <div class="modal-body">
-                                <form action="<?= base_url('login/logout') ?>" method="post">
-                                    <h4 class="text-center mt-4 mb-5">Deseja sair da sua conta?</h4>
-                                    <p class="text-center">
-                                        <button type="button" class="btn-voltar" data-bs-dismiss="modal">Voltar</button>
-                                        <button type="submit" class="btn-modal" data-bs-dismiss="modal"
-                                            data-bs-toggle="modal" data-bs-target="#modal2">Sair</button>
-                                    </p>
-                                </form>
-                            </div>
-
-                            <div class="modal-footer"></div>
-
-                        </div>
-                    </div>
-                </div>
+                <?php partial('logout_modal'); ?>
 
             <?php endif; ?>
 
             <!-- ===================== FORMULÁRIO DE EDIÇÃO ===================== -->
             <div class="container mt-5">
-                <h5>Alterar o experimento: <strong><?= $editarExperimentos->experimentos_titulo ?></strong></h5>
+                <h5>Alterar o experimento: <strong><?= esc($editarExperimentos->experimentos_titulo) ?></strong></h5>
 
-                <form action="<?= base_url('experimentos/editarExperimentosAtivo/' . $editarExperimentos->experimentos_id) ?>" method="post">
+                <form action="<?= base_url('experimentos/editarExperimentosAtivo/' . (int) $editarExperimentos->experimentos_id) ?>" method="post">
+<?= csrf_field() ?>
 
                     <div class="row">
 
                         <div class="col-md-6 mt-5">
                             <label for="experimentos_titulo">Título do experimento</label>
                             <input type="text" name="experimentos_titulo" class="form-control" id="titulo"
-                                placeholder="Informe o nome do experimento" value="<?= $editarExperimentos->experimentos_titulo ?>">
+                                placeholder="Informe o nome do experimento" maxlength="80" value="<?= esc($editarExperimentos->experimentos_titulo) ?>">
                         </div>
 
                         <div class="col-md-6 mt-5">
                             <label for="experimentos_inicio">Data de início</label>
                             <input type="date" name="experimentos_inicio" class="form-control" id="inicio"
-                                value="<?= $editarExperimentos->experimentos_inicio ?>">
+                                value="<?= esc($editarExperimentos->experimentos_inicio) ?>">
                         </div>
 
                         <div class="col-md-6 mt-5">
                             <label for="experimentos_final">Data final</label>
                             <input type="date" name="experimentos_final" class="form-control" id="final"
-                                value="<?= $editarExperimentos->experimentos_final ?>">
+                                value="<?= esc($editarExperimentos->experimentos_final) ?>">
                         </div>
 
                         <div class="col-md-6 mt-5">
                             <label for="experimentos_sala">Sala experimento</label>
                             <input type="text" name="experimentos_sala" class="form-control" id="sala"
-                                placeholder="Informe a sala do experimento" value="<?= $editarExperimentos->experimentos_sala ?>">
+                                placeholder="Informe a sala do experimento" maxlength="30" value="<?= esc($editarExperimentos->experimentos_sala) ?>">
                         </div>
 
                         <div class="botoes mt-5">
-                            <button type="button" onclick="window.location.href='<?= base_url('experimentos/excluirExperimento/' . $editarExperimentos->experimentos_id) ?>'" id="deletar" class="btn-deletar">Deletar experimento</button>
+                            <button type="button" id="deletar" class="btn-deletar" data-bs-toggle="modal" data-bs-target="#modalExcluirExperimento">Deletar experimento</button>
                             <button type="submit" id="editar" class="btn-modal">Editar experimento</button>
                         </div>
 
                     </div>
 
                 </form>
+
+                <!-- Confirmação de exclusão (POST + CSRF) -->
+                <div class="modal fade" id="modalExcluirExperimento" tabindex="-1" aria-labelledby="tituloExcluirExperimento" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <form action="<?= base_url('experimentos/excluirExperimento/' . (int) $editarExperimentos->experimentos_id) ?>" method="post">
+                                <?= csrf_field() ?>
+                                <div class="modal-body text-center">
+                                    <h4 id="tituloExcluirExperimento" class="mt-3">Deseja excluir este experimento?</h4>
+                                    <p>Os dispositivos da bancada serão desligados e o experimento sairá da sua lista.</p>
+                                </div>
+                                <div class="modal-footer justify-content-center">
+                                    <button type="button" class="btn-voltar" data-bs-dismiss="modal">Voltar</button>
+                                    <button type="submit" class="btn-deletar">Excluir</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div>
 
         </div>
 
     </div>
 
-    <!-- ===================== FOOTER ===================== -->
-    <footer class="contentFooter">
-
-        <div class="footerMain">
-            <div class="aboutFooter">
-                <h4>FarmView</h4>
-                <p>
-                    Plataforma de monitoramento em ambientes controlados
-                </p>
-            </div>
-            <div class="linkFooter">
-                <h5>Parceiros</h5>
-
-                <ul>
-                    <li><a href="https://cebiobrasil.com.br/" target="_blank">CEBIO</a></li>
-                    <li>
-                        <a href="https://www.ifgoiano.edu.br/home/index.php/ceres" target="_blank">
-                            IF Goiano Campus Ceres
-                        </a>
-                    </li>
-                    <li><a href="https://goias.gov.br/fapeg/" target="_blank">FAPEG</a></li>
-                    <li><a href="https://lattes.cnpq.br/" target="_blank">CNPq</a></li>
-                    <li><a href="#">LabTI</a></li>
-                </ul>
-            </div>
-
-        </div>
-
-        <div class="footerBottom">
-            <p>© 2026 FarmView</p>
-            <p>IF Goiano — Campus Ceres</p>
-        </div>
-
-    </footer>
+    <?php partial('footer'); ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"

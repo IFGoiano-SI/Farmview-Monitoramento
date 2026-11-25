@@ -16,16 +16,14 @@
 <body>
 
     <div class="alert-container">
-        <?php if (isset($_SESSION['msg'])): ?>
-            <?= msg($_SESSION['msg']['texto'], $_SESSION['msg']['color']); ?>
-            <?php unset($_SESSION['msg']); ?>
-        <?php endif; ?>
+        <?php partial('alerts'); ?>
     </div>
 
     <img src="<?= base_url('Public/templates/ImageSistema/verticalFarming.png') ?>" class="imgFundo" alt="sem image">
 
     <div class="loginCadastro">
         <form action="<?= base_url('login/enviarEmail') ?>" method="post">
+<?= csrf_field() ?>
             <div class="caixaLogin">
                 <div class="boaVinda">
                     <h3><Strong>Recuperação de conta</Strong></h3>
@@ -41,7 +39,7 @@
                         required
                         placeholder="Informe seu email"
                         style="padding: 1rem;"
-                        value="<?= $_POST['usuarios_email'] ?? '' ?>">
+                        value="">
                 </div>
 
                 <div class="caixaBotao" style="margin-top: 90px;">

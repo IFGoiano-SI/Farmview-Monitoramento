@@ -16,16 +16,14 @@
 <body>
 
     <div class="alert-container">
-        <?php if (isset($_SESSION['msg'])): ?>
-            <?= msg($_SESSION['msg']['texto'], $_SESSION['msg']['color']); ?>
-            <?php unset($_SESSION['msg']); ?>
-        <?php endif; ?>
+        <?php partial('alerts'); ?>
     </div>
 
     <img src="<?= base_url('Public/templates/ImageSistema/verticalFarming.png') ?>" class="imgFundo" alt="sem image">
 
     <div class="loginCadastro">
         <form action="<?= base_url('login/salvarSenha') ?>" method="post">
+<?= csrf_field() ?>
             <div class="caixaLogin">
                 <div class="boaVinda">
                     <h3><Strong>Alteração de senha</Strong></h3>
@@ -39,6 +37,8 @@
                         class="form-control"
                         id="usuarios_senha"
                         required
+                        minlength="<?= \Services\Validacao::SENHA_MINIMA ?>"
+                        autocomplete="new-password"
                         placeholder="Informe sua senha"
                         style="padding: 1rem;">
                 </div>
@@ -54,7 +54,7 @@
                         style="padding: 1rem;">
                 </div>
 
-                <input type="hidden" name="token" value="<?= $_SESSION['token'] ?>">
+                <input type="hidden" name="token" value="<?= esc($token ?? '') ?>">
 
                 <div class="caixaBotao" style="margin-top: 50px;">
                     <button type="submit" class="btn-entrar"> Alterar senha</button>

@@ -1,4 +1,3 @@
-<?php redirectPages(); ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 
@@ -132,7 +131,6 @@
     $foto = $_SESSION['usuarios_logado']->usuarios_imagem;
     $nome = $_SESSION['usuarios_logado']->usuarios_nome;
     $escolaridade = $_SESSION['usuarios_logado']->usuarios_escolaridade;
-    $url_rasp = $_SESSION['url_rasp'];
     ?>
 
     <div class="fullScreen">
@@ -172,10 +170,7 @@
         <div class="contentScreen">
 
             <div class="alert-container">
-                <?php if (isset($_SESSION['msg'])): ?>
-                    <?= msg($_SESSION['msg']['texto'], $_SESSION['msg']['color']); ?>
-                    <?php unset($_SESSION['msg']); ?>
-                <?php endif; ?>
+                <?php partial('alerts'); ?>
             </div>
 
             <!-- ===================== NAVBAR ===================== -->
@@ -189,7 +184,7 @@
 
                     <div class="navLogout">
                         <a href="">
-                            <img id="imagePerson" src="<?= base_url($foto) ?>" alt="Foto de perfil">
+                            <img id="imagePerson" src="<?= esc(base_url($foto)) ?>" alt="Foto de perfil">
                         </a>
 
 
@@ -200,30 +195,7 @@
                 </div>
 
 
-                <div class="modal fade" id="meuModalSair" tabindex="-1">
-                    <div class="modal-dialog modal-dialog-centered modal-md">
-                        <div class="modal-content">
-
-                            <div class="modal-header">
-                                <h5 class="modal-title" style="text-align: center !important; font-size: x-large;"></h5>
-                            </div>
-
-                            <div class="modal-body">
-                                <form action="<?= base_url('login/logout') ?>" method="post">
-                                    <h4 class="text-center mt-4 mb-5">Deseja sair da sua conta?</h4>
-                                    <p class="text-center">
-                                        <button type="button" class="btn-voltar" data-bs-dismiss="modal">Voltar</button>
-                                        <button type="submit" class="btn-finalizar" data-bs-dismiss="modal"
-                                            data-bs-toggle="modal" data-bs-target="#modal2">Sair</button>
-                                    </p>
-                                </form>
-                            </div>
-
-                            <div class="modal-footer"></div>
-
-                        </div>
-                    </div>
-                </div>
+                <?php partial('logout_modal'); ?>
 
             <?php endif; ?>
 
@@ -231,22 +203,22 @@
                 <div class="groupInfo">
                     <div class="infoTitle">
                         <h5>Experimentos</h5>
-                        <p><strong>Total cadastrado: <?= $quantidadeExperimentos ?></strong></p>
+                        <p><strong>Total cadastrado: <?= (int) $quantidadeExperimentos ?></strong></p>
 
                     </div>
 
                     <div class="infoQuant">
                         <div class="imgInfo">
-                            <img class="imgInfoQuant" src="<?= base_url($topExperimentos->imagem) ?>" alt="Foto de perfil">
+                            <img class="imgInfoQuant" src="<?= esc(base_url($topExperimentos->imagem ?? 'Public/uploadImages/Noimage.png')) ?>" alt="Foto de perfil">
 
                         </div>
                         <div class="textInfo">
                             <div class="nomeInfo">
 
-                                <p style="font-size: 11pt;"><?= $topExperimentos->nome ?></p>
+                                <p style="font-size: 11pt;"><?= esc($topExperimentos->nome ?? '-') ?></p>
                             </div>
                             <div class="totInfo">
-                                <p><?= $topExperimentos->total_experimentos ?></p>
+                                <p><?= (int) ($topExperimentos->total_experimentos ?? 0) ?></p>
 
                             </div>
 
@@ -257,7 +229,7 @@
                 <div class="groupInfo">
                     <div class="infoTitle">
                         <h5>Total usuários: </h5>
-                        <p><strong>Total cadastrado <?= $totalUsuarios ?></strong></p>
+                        <p><strong>Total cadastrado <?= (int) $totalUsuarios ?></strong></p>
 
                     </div>
 
@@ -266,18 +238,7 @@
 
             </div>
 
-            <?php
-            $limite = 5;
-            $totalRegistros = count($user);
-            $totalPaginas = max(1, (int) ceil($totalRegistros / $limite));
-
-            $paginaAtual = max(1, (int) ($_GET['pagina'] ?? 1));
-            $paginaAtual = min($paginaAtual, $totalPaginas);
-
-            $offset = ($paginaAtual - 1) * $limite;
-
-            $experimentosPaginados = array_slice($user, $offset, $limite);
-            ?>
+            
 
             <div class="listTable">
                 <h4 class="mt-5" style="margin-left: 20px;">Lista de experimentos</h4>
@@ -307,7 +268,7 @@
                                         <?= htmlspecialchars($user->experimentos_status) ?>
                                     </td>
 
-                                    <form action="<?= base_url('adm/infoUser/' . rtrim(base64_encode((string) $user->experimentos_id), '=')) ?>" method="get">
+                                    <form action="<?= base_url('adm/infoUser/' . id_url((int) $user->experimentos_id)) ?>" method="get">
                                         <td><button type="submit" class="btn btn-outline-primary">Ver mais</button></td>
 
                                     </form>
@@ -375,61 +336,20 @@
     </div>
 
 
-    <!-- ===================== FOOTER ===================== -->
-    <footer class="contentFooter" style="height: auto;">
-
-        <div class="footerMain">
-            <div class="aboutFooter">
-                <h4>FarmView</h4>
-                <p>
-                    Plataforma de monitoramento em ambientes controlados
-                </p>
-            </div>
-            <div class="linkFooter">
-                <h5>Parceiros</h5>
-
-                <ul>
-                    <li><a href="https://cebiobrasil.com.br/" target="_blank">CEBIO</a></li>
-                    <li>
-                        <a href="https://www.ifgoiano.edu.br/home/index.php/ceres" target="_blank">
-                            IF Goiano Campus Ceres
-                        </a>
-                    </li>
-                    <li><a href="https://goias.gov.br/fapeg/" target="_blank">FAPEG</a></li>
-                    <li><a href="https://lattes.cnpq.br/" target="_blank">CNPq</a></li>
-                    <li><a href="#">LabTI</a></li>
-                </ul>
-            </div>
-
-        </div>
-
-        <div class="footerBottom">
-            <p>© 2026 FarmView</p>
-            <p>IF Goiano — Campus Ceres</p>
-        </div>
-
-    </footer>
+    <?php partial('footer', ['estilo' => 'height: auto;']); ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
         crossorigin="anonymous"></script>
 
     <script>
-        const BASE_URL = "<?= base_url() ?>";
-        const RASP_URL = "http://<?= $_SESSION['url_rasp'] ?>";
+        const BASE_URL = <?= json_encode(base_url()) ?>;
     </script>
 
     <script>
         window.SENSORES_URL = <?= json_encode(base_url('home/sensores')) ?>;
     </script>
     <script src="<?= base_url('/Public/Js/javascript.js') ?>"></script>
-
-
-    <script>
-        document.getElementById('camera').onerror = function() {
-            this.src = '<?= base_url('Public/templates/Images/Noimage.png') ?>';
-        };
-    </script>
 
 </body>
 

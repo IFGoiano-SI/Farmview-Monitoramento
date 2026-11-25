@@ -18,10 +18,7 @@
 
 <body>
     <div class="alert-container">
-        <?php if (isset($_SESSION['msg'])): ?>
-            <?= msg($_SESSION['msg']['texto'], $_SESSION['msg']['color']); ?>
-            <?php unset($_SESSION['msg']); ?>
-        <?php endif; ?>
+        <?php partial('alerts'); ?>
     </div>
 
     <img src="<?= base_url('Public/templates/ImageSistema/verticalFarming.png') ?>" class="imgFundo" alt="sem image">
@@ -30,6 +27,7 @@
 
         <div class="cadastro">
             <form action="<?= base_url('usuario/cadastrar') ?>" method="post" enctype="multipart/form-data">
+<?= csrf_field() ?>
                 <div class="boxCadastro">
                     <h4 class="mb-5">Realize seu cadastro</h4>
 
@@ -42,7 +40,8 @@
                             id="usuarios_nome"
                             required
                             placeholder="Informe seu nome completo"
-                            value="<?= $_POST['usuarios_nome'] ?? '' ?>">
+                            maxlength="40"
+                            value="<?= esc(old('usuarios_nome')) ?>">
                     </div>
 
                     <div class="campos mb-3">
@@ -51,11 +50,10 @@
                             class="form-control"
                             id="usuarios_escolaridade"
                             required>
-                            <option value="" selected disabled>Selecione</option>
-                            <option value="Ensino Médio">Ensino Médio</option>
-                            <option value="Graduação">Graduação</option>
-                            <option value="Mestrado">Mestrado</option>
-                            <option value="Doutorado">Doutorado</option>
+                            <option value="" <?= old('usuarios_escolaridade') === '' ? 'selected' : '' ?> disabled>Selecione</option>
+                            <?php foreach (\Services\Validacao::ESCOLARIDADES as $opcao): ?>
+                                <option value="<?= esc($opcao) ?>" <?= old('usuarios_escolaridade') === $opcao ? 'selected' : '' ?>><?= esc($opcao) ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
 
@@ -67,7 +65,7 @@
                             id="usuarios_email"
                             required
                             placeholder="Informe seu email"
-                            value="<?= $_POST['usuarios_email'] ?? '' ?>">
+                            value="<?= esc(old('usuarios_email')) ?>">
                     </div>
 
                     <div class="campos mb-3">
@@ -79,9 +77,11 @@
                                 class="form-control"
                                 id="senha"
                                 required
-                                placeholder="Informe sua senha">
+                                minlength="<?= \Services\Validacao::SENHA_MINIMA ?>"
+                                autocomplete="new-password"
+                                placeholder="Mínimo de <?= \Services\Validacao::SENHA_MINIMA ?> caracteres">
 
-                            <i class="bi bi-eye" id="toggleSenha"></i>
+                            <i class="bi bi-eye" id="toggleSenha" role="button" tabindex="0" aria-label="Mostrar ou ocultar senha"></i>
                         </div>
                     </div>
 
@@ -91,7 +91,8 @@
                             name="usuarios_imagem"
                             id="usuarios_imagem"
 
-                            accept="image/*">
+                            required
+                            accept="image/png, image/jpeg">
                     </div>
 
                     <div class="caixaBotao mt-4">

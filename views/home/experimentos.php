@@ -1,4 +1,3 @@
-<?php redirectPages(); ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 
@@ -205,10 +204,7 @@
         <div class="contentScreen">
 
             <div class="alert-container">
-                <?php if (isset($_SESSION['msg'])): ?>
-                    <?= msg($_SESSION['msg']['texto'], $_SESSION['msg']['color']); ?>
-                    <?php unset($_SESSION['msg']); ?>
-                <?php endif; ?>
+                <?php partial('alerts'); ?>
             </div>
 
             <?php if (isset($_SESSION['usuarios_logado'])): ?>
@@ -227,7 +223,7 @@
 
                     <div class="navLogout">
                         <a href="#">
-                            <img id="imagePerson" src="<?= base_url($foto) ?>" alt="Foto de perfil">
+                            <img id="imagePerson" src="<?= esc(base_url($foto)) ?>" alt="Foto de perfil">
                         </a>
 
                         <button type="button" class="btn-logout" data-bs-toggle="modal" data-bs-target="#meuModalSair">
@@ -237,31 +233,7 @@
 
                 </div>
 
-                <!-- Modal de logout -->
-                <div class="modal fade" id="meuModalSair" tabindex="-1">
-                    <div class="modal-dialog modal-dialog-centered modal-md">
-                        <div class="modal-content">
-
-                            <div class="modal-header">
-                                <h5 class="modal-title" style="text-align: center !important; font-size: x-large;"></h5>
-                            </div>
-
-                            <div class="modal-body">
-                                <form action="<?= base_url('login/logout') ?>" method="post">
-                                    <h4 class="text-center mt-4 mb-5">Deseja sair da sua conta?</h4>
-                                    <p class="text-center">
-                                        <button type="button" class="btn-voltar" data-bs-dismiss="modal">Voltar</button>
-                                        <button type="submit" class="btn-finalizar" data-bs-dismiss="modal"
-                                            data-bs-toggle="modal" data-bs-target="#modal2">Sair</button>
-                                    </p>
-                                </form>
-                            </div>
-
-                            <div class="modal-footer"></div>
-
-                        </div>
-                    </div>
-                </div>
+                <?php partial('logout_modal'); ?>
 
             <?php endif; ?>
 
@@ -293,25 +265,25 @@
                                 <?php foreach ($experimentosAtivos as $experimentoAtivos): ?>
 
                                     <div class="card" style="width: 18rem;">
-                                        <img id="imagemExperimentos" src="<?= base_url($experimentoAtivos->experimentos_imagem) ?>" class="card-img-top" alt="...">
+                                        <img id="imagemExperimentos" src="<?= esc(base_url($experimentoAtivos->experimentos_imagem)) ?>" class="card-img-top" alt="...">
 
                                         <div class="card-body">
-                                            <h5 class="card-title"><strong><?= $experimentoAtivos->experimentos_titulo ?></strong></h5>
-                                            <p class="card-text text-small"> <strong>Experimento de: </strong> <?= $experimentoAtivos->usuarios_nome . ', ' . ($experimentoAtivos->participantes_nome ? $experimentoAtivos->participantes_nome : '') ?></p>
-                                            <p class="card-text text-small"> <strong>Orientador: </strong> <?= $experimentoAtivos->participantes_orientador ?></p>
-                                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#meuModal<?= $experimentoAtivos->experimentos_id ?>">
+                                            <h5 class="card-title"><strong><?= esc($experimentoAtivos->experimentos_titulo) ?></strong></h5>
+                                            <p class="card-text text-small"> <strong>Experimento de: </strong> <?= esc(trim($experimentoAtivos->usuarios_nome . ', ' . $experimentoAtivos->participantes_nome, ', ')) ?></p>
+                                            <p class="card-text text-small"> <strong>Orientador: </strong> <?= esc($experimentoAtivos->participantes_orientador) ?></p>
+                                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#meuModal<?= (int) $experimentoAtivos->experimentos_id ?>">
                                                 Ver mais <i class="bi bi-plus"></i>
                                             </button>
                                         </div>
 
-                                        <div class="modal fade" id="meuModal<?= $experimentoAtivos->experimentos_id ?>">
+                                        <div class="modal fade" id="meuModal<?= (int) $experimentoAtivos->experimentos_id ?>">
                                             <div class="modal-dialog modal-dialog-centered modal-xl">
 
                                                 <div class="modal-content">
 
                                                     <div class="modal-header">
                                                         <h5 class="modal-title" style="text-align: center !important; font-size: x-large;">
-                                                            <?= $experimentoAtivos->experimentos_titulo ?></h5>
+                                                            <?= esc($experimentoAtivos->experimentos_titulo) ?></h5>
                                                         <button class="btn-close" data-bs-dismiss="modal"></button>
                                                     </div>
 
@@ -319,14 +291,14 @@
 
                                                         <div class="info-group">
                                                             <div class="info-imagem">
-                                                                <img src="<?= base_url($experimentoAtivos->experimentos_imagem) ?>" alt="imagemPerfil">
+                                                                <img src="<?= esc(base_url($experimentoAtivos->experimentos_imagem)) ?>" alt="imagemPerfil">
                                                                 <div class="info-dados">
-                                                                    <h5 class="mt-1" style="font-size: 16pt ;"><strong><?= $experimentoAtivos->experimentos_titulo ?></strong></h5>
-                                                                    <p><strong>Orientador: </strong> <?= ($experimentoAtivos->participantes_orientador ? $experimentoAtivos->participantes_orientador : 'Orientador não informado'); ?></p>
+                                                                    <h5 class="mt-1" style="font-size: 16pt ;"><strong><?= esc($experimentoAtivos->experimentos_titulo) ?></strong></h5>
+                                                                    <p><strong>Orientador: </strong> <?= esc($experimentoAtivos->participantes_orientador ?: 'Orientador não informado') ?></p>
 
-                                                                    <p><strong>Alunos: </strong> <?= $experimentoAtivos->usuarios_nome . ', ' . $experimentoAtivos->participantes_nome ?></p>
+                                                                    <p><strong>Alunos: </strong> <?= esc(trim($experimentoAtivos->usuarios_nome . ', ' . $experimentoAtivos->participantes_nome, ', ')) ?></p>
                                                                    
-                                                                    <p><strong>Luzes do experimento: </strong> <?= ($experimentoAtivos->bancadas_luzes ? implode(', ', json_decode($experimentoAtivos->bancadas_luzes, true)) : "Não há luzes no experimento!")  ?></p>
+                                                                    <p><strong>Luzes do experimento: </strong> <?= esc(luzes_texto($experimentoAtivos->bancadas_luzes, 'Não há luzes no experimento!')) ?></p>
                                                                     <p><strong>Bancada: </strong> <?= esc($experimentoAtivos->bancadas_tipo_plantacao) ?> </p>
                                                                     <p><strong>Nome Científico: </strong> <?= esc($experimentoAtivos->bancadas_nome_cientifico) ?> </p>
                                                                     <p><strong>Quantidade de plantação: </strong> <?= esc($experimentoAtivos->bancadas_quantidade) ?> </p>
@@ -336,8 +308,8 @@
                                                             </div>
                                                             <div class="info-status mb-4">
                                                                 <p><strong>Status:</strong> <span style="color: #21BA7C; font-weight:bold">Ativo</span></p>
-                                                                <p><strong>Início:</strong> <?= date('d/m/Y', strtotime($experimentoAtivos->experimentos_inicio)) ?></p>
-                                                                <p><strong>Final:</strong> <?= date('d/m/Y', strtotime($experimentoAtivos->experimentos_final)) ?></p>
+                                                                <p><strong>Início:</strong> <?= data_br($experimentoAtivos->experimentos_inicio) ?></p>
+                                                                <p><strong>Final:</strong> <?= data_br($experimentoAtivos->experimentos_final) ?></p>
 
                                                             </div>
                                                         </div>
@@ -392,24 +364,24 @@
 
                                 <?php foreach ($experimentosFinalizados as $experimentoFinalizado): ?>
                                     <div class="card" style="width: 18rem;">
-                                        <img id="imagemExperimentos" src="<?= base_url($experimentoFinalizado->experimentos_imagem) ?>" class="card-img-top" alt="...">
+                                        <img id="imagemExperimentos" src="<?= esc(base_url($experimentoFinalizado->experimentos_imagem)) ?>" class="card-img-top" alt="...">
 
                                         <div class="card-body">
-                                            <h5 class="card-title"><strong><?= $experimentoFinalizado->experimentos_titulo ?></strong></h5>
-                                            <p class="card-text text-small"> <strong>Experimento de: </strong> <?= $experimentoFinalizado->participantes_nome . ' , ' .  $experimentoFinalizado->participantes_orientador ?></p>
-                                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#meuModal<?= $experimentoFinalizado->experimentos_id ?>">
+                                            <h5 class="card-title"><strong><?= esc($experimentoFinalizado->experimentos_titulo) ?></strong></h5>
+                                            <p class="card-text text-small"> <strong>Experimento de: </strong> <?= esc(trim($experimentoFinalizado->participantes_nome . ', ' . $experimentoFinalizado->participantes_orientador, ', ')) ?></p>
+                                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#meuModal<?= (int) $experimentoFinalizado->experimentos_id ?>">
                                                 Ver mais <i class="bi bi-plus"></i>
                                             </button>
                                         </div>
 
-                                        <div class="modal fade" id="meuModal<?= $experimentoFinalizado->experimentos_id ?>">
+                                        <div class="modal fade" id="meuModal<?= (int) $experimentoFinalizado->experimentos_id ?>">
                                             <div class="modal-dialog modal-dialog-centered modal-xl">
 
                                                 <div class="modal-content">
 
                                                     <div class="modal-header">
                                                         <h5 class="modal-title" style="text-align: center !important; font-size: x-large;">
-                                                            <?= $experimentoFinalizado->experimentos_titulo ?></h5>
+                                                            <?= esc($experimentoFinalizado->experimentos_titulo) ?></h5>
                                                         <button class="btn-close" data-bs-dismiss="modal"></button>
                                                     </div>
 
@@ -417,14 +389,14 @@
 
                                                         <div class="info-group">
                                                             <div class="info-imagem">
-                                                                <img src="<?= base_url($experimentoFinalizado->experimentos_imagem) ?>" alt="imagemPerfil">
+                                                                <img src="<?= esc(base_url($experimentoFinalizado->experimentos_imagem)) ?>" alt="imagemPerfil">
                                                                 <div class="info-dados">
-                                                                    <h5 class="mt-1" style="font-size: 16pt ;"><strong><?= $experimentoFinalizado->experimentos_titulo ?></strong></h5>
-                                                                    <p><strong>Orientador: </strong> <?= ($experimentoFinalizado->participantes_orientador ? $experimentoFinalizado->participantes_orientador : 'Orientador não informado'); ?></p>
+                                                                    <h5 class="mt-1" style="font-size: 16pt ;"><strong><?= esc($experimentoFinalizado->experimentos_titulo) ?></strong></h5>
+                                                                    <p><strong>Orientador: </strong> <?= esc($experimentoFinalizado->participantes_orientador ?: 'Orientador não informado') ?></p>
 
-                                                                    <p><strong>Alunos: </strong> <?= $experimentoFinalizado->usuarios_nome . ', ' . $experimentoFinalizado->participantes_nome ?></p>
+                                                                    <p><strong>Alunos: </strong> <?= esc(trim($experimentoFinalizado->usuarios_nome . ', ' . $experimentoFinalizado->participantes_nome, ', ')) ?></p>
                                                                 
-                                                                    <p><strong>Luzes do experimento: </strong> <?= ($experimentoFinalizado->bancadas_luzes ? implode(', ', json_decode($experimentoFinalizado->bancadas_luzes, true)) : "Não houve luzes utilizadas!")  ?></p>
+                                                                    <p><strong>Luzes do experimento: </strong> <?= esc(luzes_texto($experimentoFinalizado->bancadas_luzes, 'Não houve luzes utilizadas!')) ?></p>
                                                                     <p><strong>Bancada: </strong> <?= esc($experimentoFinalizado->bancadas_tipo_plantacao) ?> </p>
                                                                     <p><strong>Nome Científico: </strong> <?= esc($experimentoFinalizado->bancadas_nome_cientifico) ?> </p>
                                                                     <p><strong>Quantidade de plantação: </strong> <?= esc($experimentoFinalizado->bancadas_quantidade) ?> </p>
@@ -434,9 +406,9 @@
                                                             </div>
                                                             <div class="info-status mb-4">
                                                                 <p><strong>Status:</strong> <span style="color: #C52222; font-weight:bold">Finalizado</span></p>
-                                                                <p><strong>Início:</strong> <?= date('d/m/Y', strtotime($experimentoFinalizado->experimentos_inicio)) ?></p>
-                                                                <p><strong>Final:</strong> <?= date('d/m/Y', strtotime($experimentoFinalizado->experimentos_final)) ?></p>
-                                                                <p><strong>Encerrado:</strong> <?= date('d/m/Y H:i:s', strtotime($experimentoFinalizado->experimentos_encerrado)) ?></p>
+                                                                <p><strong>Início:</strong> <?= data_br($experimentoFinalizado->experimentos_inicio) ?></p>
+                                                                <p><strong>Final:</strong> <?= data_br($experimentoFinalizado->experimentos_final) ?></p>
+                                                                <p><strong>Encerrado:</strong> <?= data_br($experimentoFinalizado->experimentos_encerrado, 'd/m/Y H:i:s') ?></p>
 
                                                             </div>
                                                         </div>
@@ -476,40 +448,7 @@
 
     </div>
 
-    <!-- ===================== FOOTER ===================== -->
-    <footer class="contentFooter">
-
-        <div class="footerMain">
-            <div class="aboutFooter">
-                <h4>FarmView</h4>
-                <p>
-                    Plataforma de monitoramento em ambientes controlados
-                </p>
-            </div>
-            <div class="linkFooter">
-                <h5>Parceiros</h5>
-
-                <ul>
-                    <li><a href="https://cebiobrasil.com.br/" target="_blank">CEBIO</a></li>
-                    <li>
-                        <a href="https://www.ifgoiano.edu.br/home/index.php/ceres" target="_blank">
-                            IF Goiano Campus Ceres
-                        </a>
-                    </li>
-                    <li><a href="https://goias.gov.br/fapeg/" target="_blank">FAPEG</a></li>
-                    <li><a href="https://lattes.cnpq.br/" target="_blank">CNPq</a></li>
-                    <li><a href="#">LabTI</a></li>
-                </ul>
-            </div>
-
-        </div>
-
-        <div class="footerBottom">
-            <p>© 2026 FarmView</p>
-            <p>IF Goiano — Campus Ceres</p>
-        </div>
-
-    </footer>
+    <?php partial('footer'); ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"

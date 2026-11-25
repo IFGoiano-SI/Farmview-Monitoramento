@@ -2,661 +2,267 @@
 
 namespace Controllers;
 
+use Models\ExperimentoModel;
+use Models\UsuarioModel;
+use RuntimeException;
+use Services\Logger;
+use Services\Upload;
+use Services\Validacao;
 
-
-use Exception;
-use Models\Database as Conexao;
-use \PDO;
-use \Ultis\RenderView;
-use Datetime;
-
-
-class AdminController extends RenderView
+class AdminController extends BaseController
 {
+    private const POR_PAGINA = 5;
 
-    private $usuario;
-
-    private $conexao;
-    private $conexaoMoreUser;
-    private $bancadasExperimento;
-    private $allUsers;
-
+    private UsuarioModel $usuarios;
+    private ExperimentoModel $experimentos;
 
     public function __construct()
     {
-        $this->usuario = new UsuarioController();
-        $this->conexao = new Conexao();
-        $this->conexaoMoreUser = new Conexao('participantes');
-        $this->bancadasExperimento = new Conexao('bancadas_experimentos');
-        $this->allUsers = new Conexao('usuarios');
+        $this->usuarios = new UsuarioModel();
+        $this->experimentos = new ExperimentoModel();
     }
 
-    protected function redirect($path, $mensagem = null)
+    public function index(): void
     {
-        if ($mensagem) {
-            $_SESSION['msg'] = $mensagem;
-        }
-        header("Location: {$path}");
-        exit();
+        $totalRegistros = $this->experimentos->totalComBancada();
+        $totalPaginas = max(1, (int) ceil($totalRegistros / self::POR_PAGINA));
+        $paginaAtual = min(max(1, (int) ($_GET['pagina'] ?? 1)), $totalPaginas);
+
+        $this->loadView('adm/index', [
+            'pagina' => 'Experimento de usuario',
+            'quantidadeExperimentos' => $this->experimentos->total(),
+            'topExperimentos' => $this->experimentos->usuarioComMaisExperimentos(),
+            'totalUsuarios' => $this->usuarios->total(),
+            'experimentosPaginados' => $this->experimentos->listarPaginado(self::POR_PAGINA, ($paginaAtual - 1) * self::POR_PAGINA),
+            'paginaAtual' => $paginaAtual,
+            'totalPaginas' => $totalPaginas,
+        ]);
     }
 
-
-    public function index()
+    public function infoUser(string $id): void
     {
-        $data = [];
-
-        $data['pagina'] = "Experimento de usuario";
-
-        $this->usuario->listarUsuario();
-
-        $data['quantidadeExperimentos'] = $this->conexao->selectQuantidadeExperimentos();
-        $data['topExperimentos'] = $this->conexao->mostrarMaiorQuantidadeExperimentoUsuario();
-        $data['totalUsuarios'] = $this->conexao->totalQuantidadeUsuarios();
-        $data['user'] = $this->moreUser();
-
-        return $this->loadView('adm/index', $data);
-    }
-
-
-    public function infoUser($id)
-    {
-        $experimentos_id = base64_decode($id, true);
-
-        if ($experimentos_id === false || !ctype_digit($experimentos_id)) {
-            http_response_code(400);
-            exit('ID inválido');
-        }
-
-        $where = "e.experimentos_id = " . (int) $experimentos_id;
-
-        $data['infoUser'] = $this->moreUser($where)[0] ?? null;
-
-        return $this->loadView('adm/infoUser', $data);
-    }
-
-    // Função para ativar os experimentos finalizados, contendo regras de apenas 1 experimento por pessoa
-
-    public function ativarExperimentos()
-    {
-
-        $usuario = $_POST['usuarios_id'];
-        $experimento = (int) $_POST['experimentos_id'];
-
-        $idCriptografado = rtrim(base64_encode((string) $experimento), '=');
-
-        $validar = $this->conexao->verificarExperimentosAtivo($usuario);
-
-        if ($validar >= 1) {
-            $_SESSION['msg'] = [
-                'texto' => 'O usuário ja possui um experimento ativo!',
-                'color' => 'danger',
-            ];
-
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
-        }
-
-        $join = "usuarios as u on u.usuarios_id = participantes_usuarios_id INNER JOIN experimentos as e on e.experimentos_id = participantes_experimentos_id";
-
-        $where = "e.experimentos_id = " . (int) $experimento;
-        $values = "e.experimentos_status = 'Ativo', e.experimentos_encerrado = '0000-00-00 00:00:00'";
-
-        if (!$this->conexaoMoreUser->UpdateExperimentos($join, $where, $values)) {
-
-            $_SESSION['msg'] = [
-                'texto' => 'Erro ao ativar o experimento!',
-                'color' => 'danger',
-            ];
-
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
-        }
-
-
-        $_SESSION['msg'] = [
-            'texto' => 'Experimento ativado com sucesso!',
-            'color' => 'success',
-        ];
-
-        $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
-    }
-
-
-    // Função para editar experimentos de forma especifica
-    public function editarExperimentos()
-    {
-
-        $post = $_POST;
-
-        $experimentoId = $post['experimentos_id'];
-        $idCriptografado = rtrim(base64_encode((string) $experimentoId), '=');
-        $join = "bancadas AS b
-        ON b.bancadas_id = bancadas_experimentos.be_bancadas_id
-        INNER JOIN experimentos AS e
-        ON e.experimentos_id = bancadas_experimentos.be_experimentos_id";
-
-        $where = "e.experimentos_id = " . (int) $experimentoId;
-
-        $experimento =  $this->moreUser($where)[0] ?? null;
-
-
+        $experimento = $this->experimentos->detalhado($this->idDaUrlOu400($id));
 
         if (!$experimento) {
-            $_SESSION['msg'] = [
-                'texto' => 'Experimento não encontrado.',
-                'color' => 'danger',
-            ];
-
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
+            $this->redirect(base_url('adm/index'), 'Experimento não encontrado.', 'danger');
         }
 
+        $this->loadView('adm/infoUser', ['infoUser' => $experimento]);
+    }
 
-        $valuesEdit = [
-            'experimentos_titulo' => $post['experimentos_titulo'] ?? $experimento->experimentos_titulo,
+    /** Reativa um experimento, respeitando a regra de um experimento ativo por usuário. */
+    public function ativarExperimentos(): void
+    {
+        $experimentoId = (int) ($_POST['experimentos_id'] ?? 0);
+        $voltar = base_url('adm/infoUser/' . id_url($experimentoId));
+        $experimento = $this->experimentos->detalhado($experimentoId);
+
+        if (!$experimento) {
+            $this->redirect($voltar, 'Experimento não encontrado.', 'danger');
+        }
+
+        if ($experimento->experimentos_status === ExperimentoModel::STATUS_ATIVO) {
+            $this->redirect($voltar, 'Este experimento já está ativo.', 'warning');
+        }
+
+        // O dono vem do banco, nunca do formulário.
+        if ($this->experimentos->contarAtivosDoUsuario((int) $experimento->usuarios_id) >= 1) {
+            $this->redirect($voltar, 'O usuário ja possui um experimento ativo!', 'danger');
+        }
+
+        $this->experimentos->alterarStatus($experimentoId, ExperimentoModel::STATUS_ATIVO);
+        Logger::info('Experimento reativado pelo administrador', ['experimento' => $experimentoId]);
+
+        $this->redirect($voltar, 'Experimento ativado com sucesso!');
+    }
+
+    public function editarExperimentos(): void
+    {
+        $post = $_POST;
+        $experimentoId = (int) ($post['experimentos_id'] ?? 0);
+        $voltar = base_url('adm/infoUser/' . id_url($experimentoId));
+        $experimento = $this->experimentos->detalhado($experimentoId);
+
+        if (!$experimento) {
+            $this->redirect($voltar, 'Experimento não encontrado.', 'danger');
+        }
+
+        $dadosExperimento = [
+            'experimentos_titulo' => trim((string) ($post['experimentos_titulo'] ?? $experimento->experimentos_titulo)),
             'experimentos_inicio' => $post['experimentos_inicio'] ?? $experimento->experimentos_inicio,
-            'experimentos_final'  => $post['experimentos_final'] ?? $experimento->experimentos_final,
-            'experimentos_sala'   => $post['experimentos_sala'] ?? $experimento->experimentos_sala,
-            'bancadas_tipo_plantacao' => $post['bancadas_tipo_plantacao'] ?? $experimento->bancadas_tipo_plantacao,
-            'bancadas_nome_cientifico' => $post['bancadas_nome_cientifico'] ?? $experimento->bancadas_nome_cientifico,
+            'experimentos_final' => $post['experimentos_final'] ?? $experimento->experimentos_final,
+            'experimentos_sala' => trim((string) ($post['experimentos_sala'] ?? $experimento->experimentos_sala)),
+        ];
+
+        $dadosBancada = [
+            'bancadas_tipo_plantacao' => trim((string) ($post['bancadas_tipo_plantacao'] ?? $experimento->bancadas_tipo_plantacao)),
+            'bancadas_nome_cientifico' => trim((string) ($post['bancadas_nome_cientifico'] ?? $experimento->bancadas_nome_cientifico)),
             'bancadas_quantidade' => $post['bancadas_quantidade'] ?? $experimento->bancadas_quantidade,
         ];
 
+        $erro = Validacao::experimento($dadosExperimento) ?? Validacao::bancada($dadosBancada, false);
 
-
-
-
-        $dataLimite = (new DateTime())->modify('-10 days');
-        $dataLimitePosterior = (new DateTime())->modify('+10 days');
-        $dataHoje = strtotime(date('d/m/Y'));
-
-
-        // Validação de 10 dias antes do dia atual.
-        // O inicio do experimento nao pode ser menor que 10 dias que hoje
-        if (strtotime($valuesEdit['experimentos_inicio']) < strtotime($dataLimite->format('Y-m-d'))) {
-            $_SESSION['msg'] = ['texto' => "A data de início não pode ser anterior a 10 dias atrás.", 'color' => 'danger'];
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
+        if ($erro) {
+            $this->redirect($voltar, $erro, 'danger');
         }
 
+        $dadosBancada['bancadas_quantidade'] = (int) $dadosBancada['bancadas_quantidade'];
 
-        // Validação de 10 dias depois do dia atual.
-        // O inicio do experimento nao pode ser maior que 10 dias que hoje
-        if (strtotime($valuesEdit['experimentos_inicio']) > strtotime($dataLimitePosterior->format('Y-m-d'))) {
-            $_SESSION['msg'] = ['texto' => "A data de início não pode ser maior que 10 dias. ", 'color' => 'danger'];
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
-        }
+        $this->experimentos->transacao(function () use ($experimentoId, $dadosExperimento, $dadosBancada) {
+            $this->experimentos->atualizarDados($experimentoId, $dadosExperimento);
+            $this->experimentos->atualizarBancada($experimentoId, $dadosBancada);
+        });
 
-        // data do experimento final do experimento nao pode ser menor que hoje
-        if (strtotime($valuesEdit['experimentos_final']) < $dataHoje) {
-            $_SESSION['msg'] = ['texto' => "A data final do experimento não pode ser inferior a data atual.", 'color' => 'danger'];
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
-        }
-
-
-
-        // Data final nao pode ser menor que a data de inicio
-        if (strtotime($valuesEdit['experimentos_final']) < strtotime($valuesEdit['experimentos_inicio'])) {
-            $_SESSION['msg'] = [
-                'texto' => "A data final do experimento não pode ser menor que a inicial",
-                'color' => 'danger',
-            ];
-
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
-        }
-
-
-        //titulo nao pode ter menos que 5
-        if (strlen(trim($valuesEdit['experimentos_titulo'])) < 5) {
-            $_SESSION['msg'] = [
-                'texto' => 'O título deve possuir pelo menos 5 caracteres.',
-                'color' => 'danger'
-            ];
-
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
-        }
-
-        // Validação de limites de caracteres
-        if (strlen(trim($valuesEdit['experimentos_titulo'])) > 80) {
-            $_SESSION['msg'] = [
-                'texto' => 'O título deve possuir menos de 80 caracteres.',
-                'color' => 'danger'
-            ];
-
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
-        }
-
-
-
-        if (strlen(trim($valuesEdit['experimentos_sala'])) < 5) {
-            $_SESSION['msg'] = [
-                'texto' => 'É necessário ter ao menos 5 caracteres no campo de sala!',
-                'color' => 'danger'
-            ];
-
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
-        }
-
-
-        if (!$this->bancadasExperimento->UpdateExperimentosADM($join, $where, $valuesEdit)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Erro ao editar este experimento',
-                'color' => 'danger'
-            ];
-
-            $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
-        }
-
-
-        $_SESSION['msg'] = [
-            'texto' => 'Experimento editado com sucesso!',
-            'color' => 'success',
-        ];
-
-        $this->redirect(base_url('adm/infoUser/' . $idCriptografado));
+        $this->redirect($voltar, 'Experimento editado com sucesso!');
     }
 
-
-    public function listarUsuarios()
+    public function listarUsuarios(): void
     {
-
-        $data['usuarios'] = $this->allUsers->queryList();
-        return $this->loadView('adm/usuarios', $data);
+        $this->loadView('adm/usuarios', ['usuarios' => $this->usuarios->listarTodos()]);
     }
 
-    public function createUser()
+    public function createUser(): void
     {
-
-        $usuarios_imagem = 'uploadImages/default.png';
-
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect(base_url('adm/usuarios'));
-        }
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && empty($_FILES)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Arquivo muito grande! Máximo permitido foi excedido.',
-                'color' => 'danger'
-            ];
-
-            $this->redirect(base_url('adm/usuarios'));
-        }
-
-
-        // Verifica se existe valor na varivel
-        if (
-            !isset($_FILES['usuarios_imagem']) ||
-            empty($_FILES['usuarios_imagem']['name']) ||
-            $_FILES['usuarios_imagem']['error'] !== 0
-        ) {
-
-            $_SESSION['msg'] = [
-                'texto' => 'Atenção! Informe uma imagem para o perfil!',
-                'color' => 'warning'
-            ];
-            $this->redirect(base_url('adm/usuarios'));
-        }
-        $arquivo = $_FILES['usuarios_imagem']; //atribui o caminho para variavel
-
-
-        // Validação se a imagem for maior que 2MB
-        if (!$this->conexao->validaImagem($arquivo)) {
-            $_SESSION['msg'] = [
-                'texto' => "Erro! Selecione outra imagem até 2MB",
-                'color' => 'danger',
-            ];
-
-            $this->redirect(base_url('adm/usuarios'));
-        }
-        // Validação para ver se a imagem esta no formato permitido
-        if (!$this->conexao->tipoImagem($arquivo)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Formato da imagem não permitido - Selecione apenas JPEG, JPG ou PNG',
-                'color' => 'danger',
-            ];
-
-
-            $this->redirect(base_url('adm/usuarios'));
-        }
-
-
-        $pasta = __DIR__ . '/../Public/uploadImages/';
-        $nomearquivo = uniqid() . "-" . basename($arquivo['name']);
-        $caminhoFinal = $pasta . $nomearquivo; //String para o banco de dados
-
-        if (!move_uploaded_file($arquivo['tmp_name'], $caminhoFinal)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Erro ao fazer o upload da imagem',
-                'color' => 'danger',
-            ];
-
-
-            $this->redirect(base_url('adm/usuarios'));
-        }
-
-        $usuarios_imagem = 'Public/uploadImages/' . $nomearquivo; //atribue valor para a variavel
-
-
         $post = $_POST;
+        $voltar = base_url('adm/usuarios');
 
-        $valuesCreate = [
-            'usuarios_nome' => $post['usuarios_nome'],
-            'usuarios_escolaridade' => $post['usuarios_escolaridade'],
-            'usuarios_email' => $post['usuarios_email'],
-            'usuarios_senha' => password_hash($post['usuarios_senha'], PASSWORD_DEFAULT),
-            'usuarios_imagem' => $usuarios_imagem,
-            'usuarios_ativo' => 1,
-            'usuarios_nivel' => $post['usuarios_nivel'],
-
+        $dados = [
+            'usuarios_nome' => trim((string) ($post['usuarios_nome'] ?? '')),
+            'usuarios_escolaridade' => $post['usuarios_escolaridade'] ?? '',
+            'usuarios_email' => trim((string) ($post['usuarios_email'] ?? '')),
+            'usuarios_senha' => (string) ($post['usuarios_senha'] ?? ''),
+            'usuarios_nivel' => $post['usuarios_nivel'] ?? '',
         ];
 
-
-        $emailUsuario = $valuesCreate['usuarios_email'];
-
-        $where = "usuarios_email = '$emailUsuario'";
-
-        $usuarioEmail = $this->allUsers->select(null, $where)->fetchObject();
-
-
-        // Se cadastrar sem nome
-        if (empty($valuesCreate['usuarios_nome'])) {
-            $_SESSION['msg'] = [
-                'texto' => 'O campo nome não pode ser vazio!',
-                'color' => 'danger',
-            ];
-
-            $this->redirect(base_url('adm/usuarios'));
+        if ($erro = Validacao::usuario($dados)) {
+            $this->voltarComErro($voltar, $erro, $post);
         }
 
-        // Cadastrar nomes menores que 3 caracteres
-        if (strlen($valuesCreate['usuarios_nome']) < 3) {
-            $_SESSION['msg'] = [
-                'texto' => 'O campo nome precisa ter mais de 3 caracteres!',
-                'color' => 'danger',
-            ];
-
-            $this->redirect(base_url('adm/usuarios'));
+        if ($this->usuarios->emailEmUso($dados['usuarios_email'])) {
+            $this->voltarComErro($voltar, 'Email ja cadastrado!', $post);
         }
 
-
-        // Cadatrar nomes maiores que 40 caracteres
-        if (strlen($valuesCreate['usuarios_nome']) > 40) {
-            $_SESSION['msg'] = [
-                'texto' => 'O campo nome precisa ter menos de 40 caracteres!',
-                'color' => 'danger',
-            ];
-
-            $this->redirect(base_url('adm/usuarios'));
+        try {
+            $imagem = Upload::imagem($_FILES['usuarios_imagem'] ?? null, 'Public/uploadImages');
+        } catch (RuntimeException $e) {
+            $this->voltarComErro($voltar, $e->getMessage(), $post, 'warning');
         }
 
-        // Se a escolaridade vier vazia
-        if (empty($valuesCreate['usuarios_escolaridade'])) {
-            $_SESSION['msg'] = [
-                'texto' => 'Escolha o grau de escolaridade',
-                'color' => 'danger',
-            ];
-
-            $this->redirect(base_url('adm/usuarios'));
+        try {
+            $novoId = $this->usuarios->criar([
+                'usuarios_nome' => $dados['usuarios_nome'],
+                'usuarios_escolaridade' => $dados['usuarios_escolaridade'],
+                'usuarios_email' => $dados['usuarios_email'],
+                'usuarios_senha' => password_hash($dados['usuarios_senha'], PASSWORD_DEFAULT),
+                'usuarios_imagem' => $imagem,
+                'usuarios_ativo' => 1,
+                'usuarios_nivel' => (int) $dados['usuarios_nivel'],
+            ]);
+        } catch (\PDOException $e) {
+            Upload::remover($imagem);
+            $mensagem = $e->getCode() === '23000' ? 'Email ja cadastrado!' : 'Erro ao realizar o cadastro, tente novamente!';
+            $this->voltarComErro($voltar, $mensagem, $post);
         }
 
-        // Validação do email do usuario
-        if (!filter_var($valuesCreate['usuarios_email'], FILTER_VALIDATE_EMAIL)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Formato de email inválido!',
-                'color' => 'danger',
-            ];
-
-            $this->redirect(base_url('adm/usuarios'));
-        }
-
-        if ($usuarioEmail) {
-            $_SESSION['msg'] = [
-                'texto' => 'Email ja cadastrado!',
-                'color' => 'danger',
-            ];
-
-            $this->redirect(base_url('adm/usuarios'));
-        }
-
-
-        // Validação de senha
-
-        if (strlen($valuesCreate['usuarios_senha']) < 5) {
-            $_SESSION['msg'] = [
-                'texto' => 'Não é permitido criar uma senha com menos de 5 caracteres!',
-                'color' => 'danger',
-            ];
-
-            $this->redirect(base_url('adm/usuarios'));
-        }
-
-        if ($this->allUsers->insert($valuesCreate)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Cadastro realizado com sucesso!',
-                'color' => 'success',
-            ];
-
-
-            $this->redirect(base_url('adm/usuarios'));
-        } else {
-            $_SESSION['msg'] = [
-                'texto' => 'Erro ao realizar o cadastro, tente novamente!',
-                'color' => 'danger',
-            ];
-
-            $this->redirect(base_url('adm/usuarios'));
-        }
+        Logger::info('Usuário criado pelo administrador', ['novo_usuario' => $novoId, 'nivel' => (int) $dados['usuarios_nivel']]);
+        $this->redirect($voltar, 'Cadastro realizado com sucesso!');
     }
 
-    public function detailsUser($id)
+    public function detailsUser(string $id): void
     {
-        $usuarios_id = base64_decode($id, true);
+        $usuario = $this->usuarios->buscarPorId($this->idDaUrlOu400($id));
 
-        if ($usuarios_id === false || !ctype_digit($usuarios_id)) {
-            http_response_code(400);
-            exit('ID inválido');
+        if (!$usuario) {
+            $this->redirect(base_url('adm/usuarios'), 'Usuário não encontrado.', 'danger');
         }
 
-        $where = "usuarios_id =" . (int) $usuarios_id;
-
-        $data['usuarios'] = $this->allUsers
-            ->selectPesquisar(null, $where)
-            ->fetch(PDO::FETCH_OBJ);
-
-        return $this->loadView('adm/userDetails', $data);
+        $this->loadView('adm/userDetails', ['usuarios' => $usuario]);
     }
 
-    public function editarUsuario()
+    public function editarUsuario(): void
     {
-
         $post = $_POST;
+        $usuarioId = (int) ($post['usuarios_id'] ?? 0);
+        $voltar = base_url('adm/detailsUser/' . id_url($usuarioId));
+        $usuario = $this->usuarios->buscarPorId($usuarioId);
 
-        $usuarioID = $post['usuarios_id'];
-        $idCriptografado = rtrim(base64_encode((string) $usuarioID), '=');
-
-
-        $where = "usuarios_id = " . (int) $usuarioID;
-
-        $usuarioEdit =  $this->allUsers->selectPesquisar(null, $where)->fetch(PDO::FETCH_OBJ);
-
-
-
-
-        if (!$usuarioEdit) {
-            $_SESSION['msg'] = [
-                'texto' => 'Usuário não encontrado.',
-                'color' => 'danger',
-            ];
-
-            $this->redirect(base_url('adm/detailsUser/' . $idCriptografado));
+        if (!$usuario) {
+            $this->redirect(base_url('adm/usuarios'), 'Usuário não encontrado.', 'danger');
         }
 
-
-        $valuesEdit = [
-            'usuarios_nome' => trim($post['usuarios_nome'] ?? $usuarioEdit->usuarios_nome),
-            'usuarios_escolaridade' => $post['usuarios_escolaridade'] ?? $usuarioEdit->usuarios_escolaridade,
-            'usuarios_email' => trim($post['usuarios_email'] ?? $usuarioEdit->usuarios_email),
-            'usuarios_ativo' => $post['usuarios_ativo'] ?? $usuarioEdit->usuarios_ativo,
-            'usuarios_nivel' => $post['usuarios_nivel'] ?? $usuarioEdit->usuarios_nivel,
-            'usuarios_atualizado_em' => date('Y-m-d H:i:s'),
+        $dados = [
+            'usuarios_nome' => trim((string) ($post['usuarios_nome'] ?? $usuario->usuarios_nome)),
+            'usuarios_escolaridade' => $post['usuarios_escolaridade'] ?? $usuario->usuarios_escolaridade,
+            'usuarios_email' => trim((string) ($post['usuarios_email'] ?? $usuario->usuarios_email)),
+            'usuarios_ativo' => (string) ($post['usuarios_ativo'] ?? $usuario->usuarios_ativo),
+            'usuarios_nivel' => (int) ($post['usuarios_nivel'] ?? $usuario->usuarios_nivel),
         ];
 
-
-
-        if (empty($valuesEdit['usuarios_nome'])) {
-
-            $_SESSION['msg'] = [
-                'texto' => 'O campo de usuário não pode ser vazio!',
-                'color' => 'danger'
-            ];
-            $this->redirect(base_url('adm/detailsUser/' . $idCriptografado));
+        if ($erro = Validacao::usuario($dados, false)) {
+            $this->redirect($voltar, $erro, 'danger');
         }
 
-        if (empty($valuesEdit['usuarios_escolaridade'])) {
-
-            $_SESSION['msg'] = [
-                'texto' => 'O campo de escolaridade não pode ser vazio!',
-                'color' => 'danger'
-            ];
-            $this->redirect(base_url('adm/detailsUser/' . $idCriptografado));
+        if ($this->usuarios->emailEmUso($dados['usuarios_email'], $usuarioId)) {
+            $this->redirect($voltar, 'Email ja cadastrado!', 'danger');
         }
 
-
-        if (empty($valuesEdit['usuarios_email'])) {
-
-            $_SESSION['msg'] = [
-                'texto' => 'O campo de email não pode ser vazio!',
-                'color' => 'danger'
-            ];
-            $this->redirect(base_url('adm/detailsUser/' . $idCriptografado));
+        // O administrador não pode se desativar nem remover o próprio acesso.
+        if ($usuarioId === $this->usuarioId() && ($dados['usuarios_ativo'] !== '1' || $dados['usuarios_nivel'] !== 2)) {
+            $this->redirect($voltar, 'Você não pode desativar ou rebaixar a sua própria conta.', 'danger');
         }
 
-        if (!filter_var($valuesEdit['usuarios_email'], FILTER_VALIDATE_EMAIL)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Formato de email inválido!',
-                'color' => 'danger',
-            ];
+        // Troca de senha opcional (os campos existiam na tela, mas eram ignorados).
+        $novaSenha = (string) ($post['nova_senha'] ?? '');
 
-            $this->redirect(base_url('adm/detailsUser/' . $idCriptografado));
+        if ($novaSenha !== '') {
+            if ($novaSenha !== (string) ($post['confirmar_senha'] ?? '')) {
+                $this->redirect($voltar, 'Os campos de senha não podem ser diferentes!', 'danger');
+            }
+
+            if ($erro = Validacao::senha($novaSenha)) {
+                $this->redirect($voltar, $erro, 'danger');
+            }
+
+            $dados['usuarios_senha'] = password_hash($novaSenha, PASSWORD_DEFAULT);
         }
+
+        $dados['usuarios_ativo'] = (int) $dados['usuarios_ativo'];
+        $dados['usuarios_atualizado_em'] = date('Y-m-d H:i:s');
 
         $arquivo = $_FILES['usuarios_imagem'] ?? null;
-        $erroUpload = $arquivo['error'] ?? UPLOAD_ERR_NO_FILE;
-        $caminhoNovaImagem = null;
 
-        if ($erroUpload !== UPLOAD_ERR_NO_FILE) {
-            $mensagemErro = null;
-            $mime = null;
-
-            if (in_array($erroUpload, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
-                $mensagemErro = 'A imagem excedeu o limite de upload.';
-            } elseif ($erroUpload !== UPLOAD_ERR_OK) {
-                $mensagemErro = 'Erro ao receber a imagem de perfil.';
-            } elseif (!$this->conexao->validaImagem($arquivo)) {
-                $mensagemErro = 'Selecione uma imagem de até 2 MB.';
-            } else {
-                $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($arquivo['tmp_name']);
-
-                if (!in_array($mime, ['image/jpeg', 'image/png'], true)) {
-                    $mensagemErro = 'Selecione uma imagem JPG, JPEG ou PNG.';
-                }
+        if (($arquivo['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            try {
+                $dados['usuarios_imagem'] = Upload::imagem($arquivo, 'Public/uploadImages');
+            } catch (RuntimeException $e) {
+                $this->redirect($voltar, $e->getMessage(), 'danger');
             }
-
-            if ($mensagemErro !== null) {
-                $_SESSION['msg'] = [
-                    'texto' => $mensagemErro,
-                    'color' => 'danger',
-                ];
-
-                $this->redirect(base_url('adm/detailsUser/' . $idCriptografado));
-                return;
-            }
-
-            $extensao = $mime === 'image/png' ? 'png' : 'jpg';
-            $nomeArquivo = bin2hex(random_bytes(16)) . '.' . $extensao;
-            $caminhoNovaImagem = __DIR__ . '/../Public/uploadImages/' . $nomeArquivo;
-
-            if (!move_uploaded_file($arquivo['tmp_name'], $caminhoNovaImagem)) {
-                $_SESSION['msg'] = [
-                    'texto' => 'Erro ao salvar a nova foto de perfil.',
-                    'color' => 'danger',
-                ];
-
-                $this->redirect(base_url('adm/detailsUser/' . $idCriptografado));
-                return;
-            }
-
-            $valuesEdit['usuarios_imagem'] = 'Public/uploadImages/' . $nomeArquivo;
         }
 
+        $this->usuarios->atualizar($usuarioId, $dados);
 
-
-        if (!$this->allUsers->UpdateExperimentosADM(null, $where, $valuesEdit)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Erro ao editar os dados desse usuário',
-                'color' => 'danger'
-            ];
-
-            $this->redirect(base_url('adm/detailsUser/' . $idCriptografado));
+        if (isset($dados['usuarios_imagem']) && $usuario->usuarios_imagem !== $dados['usuarios_imagem']
+            && !str_ends_with((string) $usuario->usuarios_imagem, 'Noimage.png')) {
+            Upload::remover($usuario->usuarios_imagem);
         }
 
-
-        $_SESSION['msg'] = [
-            'texto' => 'Usuário editado com sucesso!',
-            'color' => 'success',
-        ];
-
-        $this->redirect(base_url('adm/usuarios'));
+        Logger::info('Usuário editado pelo administrador', ['alvo' => $usuarioId]);
+        $this->redirect(base_url('adm/usuarios'), 'Usuário editado com sucesso!');
     }
 
-
-    public function deletarUsuario($id)
+    public function deletarUsuario(string $id): void
     {
+        $usuarioId = $this->idDaUrlOu400($id);
 
-        $usuarios_id = base64_decode($id, true);
-
-        if ($usuarios_id === false || !ctype_digit($usuarios_id)) {
-            http_response_code(400);
-            exit('ID inválido');
+        if ($usuarioId === $this->usuarioId()) {
+            $this->redirect(base_url('adm/detailsUser/' . $id), 'Você não pode excluir a sua própria conta.', 'danger');
         }
 
-        $valuesExcluir = [
-            'usuarios_ativo' => 0,
-            'usuarios_deletado_em' => date('Y-m-d H:i:s'),
-        ];
-
-        $where = "usuarios_id ='$usuarios_id'";
-
-
-        if (!$this->allUsers->update($where, $valuesExcluir)) {
-            $_SESSION['msg'] = [
-                'texto' => 'Erro ao excluir este usuário!',
-                'color' => 'danger',
-            ];
-
-            $this->redirect(base_url('adm/detailsUser/' . $id));
+        if (!$this->usuarios->desativar($usuarioId)) {
+            $this->redirect(base_url('adm/detailsUser/' . $id), 'Erro ao excluir este usuário!', 'danger');
         }
 
-        $_SESSION['msg'] = [
-            'texto' => 'Usuário excluído com sucesso!',
-            'color' => 'success',
-        ];
-
-        $this->redirect(base_url('adm/usuarios'));
-    }
-
-
-
-
-
-    // FUnção para listar os experimentos de todos os usuarios, usado no index 
-    private function moreUser($where = null)
-    {
-
-        $join = "usuarios as u on u.usuarios_id = participantes_usuarios_id
-                INNER JOIN experimentos as e on e.experimentos_id = participantes_experimentos_id
-                INNER JOIN bancadas_experimentos as bc on bc.be_experimentos_id = e.experimentos_id
-                INNER JOIN bancadas as b on b.bancadas_id = bc.be_bancadas_id";
-
-        $order = "experimentos_id ASC";
-
-        return $this->conexaoMoreUser->selectPesquisar($join, $where, $order)->fetchAll(PDO::FETCH_OBJ);
+        Logger::info('Usuário desativado pelo administrador', ['alvo' => $usuarioId]);
+        $this->redirect(base_url('adm/usuarios'), 'Usuário excluído com sucesso!');
     }
 }
