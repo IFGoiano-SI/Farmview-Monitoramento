@@ -1,0 +1,21 @@
+# Serviço systemd do FarmView no Raspberry Pi.
+# Instalação:
+#   sudo cp raspberry/farmview.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now farmview
+# Logs: journalctl -u farmview -f   (e raspberry/logs/farmview.log)
+[Unit]
+Description=FarmView - monitoramento da bancada
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/Farmview-Monitoramento/raspberry
+# Defina o token em /etc/farmview.env:  FARMVIEW_TOKEN=um-valor-longo-e-aleatorio
+EnvironmentFile=-/etc/farmview.env
+ExecStart=/usr/bin/python3 app.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

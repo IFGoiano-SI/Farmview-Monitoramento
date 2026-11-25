@@ -5,5 +5,9 @@
     "sensor_referencia": 1,
     "tomada_bomba": 1,
     "intervalo_verificacao_segundos": 12,
-    "ip_aplicacao": "192.168.1.18"
+    "ip_aplicacao": "",
+    "tempo_maximo_bomba_segundos": 300,
+    "pausa_apos_limite_segundos": 600,
+    "leitura_maxima_segundos": 30,
+    "retencao_dias": 90
 }

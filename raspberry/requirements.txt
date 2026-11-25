@@ -1,0 +1,7 @@
+# Dependências do serviço FarmView no Raspberry Pi.
+# No Raspberry OS, prefira: sudo apt install python3-opencv python3-rpi.gpio ffmpeg
+flask>=2.2,<4
+opencv-python-headless>=4.6
+RPi.GPIO>=0.7
+adafruit-blinka>=8.0
+adafruit-circuitpython-ads1x15>=2.4
