@@ -24,6 +24,7 @@ COPY . /var/www/html
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader \
     && mkdir -p storage/logs storage/videos storage/cache Public/uploadImages Public/templates/Images \
     && chown -R www-data:www-data storage Public \
+    && sed -i 's/\r$//' /usr/local/bin/app-entrypoint.sh \
     && chmod +x /usr/local/bin/app-entrypoint.sh
 
 EXPOSE 80
