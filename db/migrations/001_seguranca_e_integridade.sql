@@ -4,8 +4,9 @@
 -- Faça BACKUP antes:  mysqldump -u root -p CEBIOHUB > backup.sql
 -- Execute uma única vez: mysql -u root -p CEBIOHUB < db/migrations/001_seguranca_e_integridade.sql
 --
--- Verificações recomendadas ANTES de rodar (devem retornar 0 linhas):
---   SELECT usuarios_email, COUNT(*) c FROM usuarios GROUP BY 1 HAVING c > 1;
+-- Pode ser executada de novo se parar no meio (ex.: após corrigir um erro).
+--
+-- Verificação recomendada ANTES de rodar (deve retornar 0 linhas):
 --   SELECT DISTINCT experimentos_status FROM experimentos
 --    WHERE experimentos_status NOT IN ('Ativo','Finalizado','Excluido');
 -- =====================================================================
@@ -28,6 +29,21 @@ UPDATE `usuarios` SET `usuarios_deletado_em`   = NULL WHERE `usuarios_deletado_e
 UPDATE `usuarios` SET `usuarios_reset_hash` = NULL, `usuarios_expira_em` = NULL;
 
 UPDATE `usuarios` SET `usuarios_ativo` = 1 WHERE `usuarios_ativo` IS NULL;
+
+-- E-mails duplicados (o cadastro antigo permitia). Mantém o registro mais antigo,
+-- que era o usado pelo login antigo; os demais são DESATIVADOS e têm o e-mail
+-- renomeado para "duplicado-<id>-<email>". Nada é apagado: experimentos e vídeos
+-- continuam ligados ao mesmo ID. Para conferir depois:
+--   SELECT usuarios_id, usuarios_nome, usuarios_email FROM usuarios WHERE usuarios_email LIKE 'duplicado-%';
+UPDATE `usuarios` u
+INNER JOIN (
+    SELECT `usuarios_email` AS email, MIN(`usuarios_id`) AS manter
+    FROM `usuarios`
+    GROUP BY `usuarios_email`
+    HAVING COUNT(*) > 1
+) d ON d.email = u.`usuarios_email` AND u.`usuarios_id` <> d.manter
+SET u.`usuarios_email` = LEFT(CONCAT('duplicado-', u.`usuarios_id`, '-', u.`usuarios_email`), 255),
+    u.`usuarios_ativo` = 0;
 
 ALTER TABLE `usuarios`
   MODIFY `usuarios_ativo` TINYINT(1) NOT NULL DEFAULT 1,
